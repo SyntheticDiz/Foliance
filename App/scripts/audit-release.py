@@ -1,7 +1,18 @@
 """Check the app bundle for identity, sandboxing, private paths and old branding."""
-import plistlib,re,struct,subprocess,sys,tempfile
+import os,plistlib,re,struct,subprocess,sys,tempfile
 from pathlib import Path
 app=Path(sys.argv[1]); failures=[]
+
+def list_xattrs_without_following_symlinks(path):
+    if hasattr(os,'listxattr'):
+        return os.listxattr(path,follow_symlinks=False)
+    # The Xcode-bundled Python on some macOS installations omits os.listxattr.
+    # Fall back to the system xattr utility, scoped to this bundle path only.
+    result=subprocess.run(['xattr','-s',str(path)],capture_output=True,text=True,check=False)
+    if result.returncode:
+        raise OSError(result.stderr.strip() or 'xattr inspection failed')
+    return result.stdout.splitlines()
+
 with (app/'Contents/Info.plist').open('rb') as f: info=plistlib.load(f)
 for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'4','LSMinimumSystemVersion':'26.0'}.items():
     if info.get(key)!=value: failures.append(f'Incorrect {key}')
@@ -37,6 +48,15 @@ if ent.get('com.apple.security.network.client') is not True: failures.append('Op
 if ent.get('com.apple.security.network.server') is not True: failures.append('Loopback OAuth callback entitlement missing')
 for key in ['com.apple.security.get-task-allow']:
     if ent.get(key): failures.append(f'Unexpected entitlement: {key}')
+for path in (app, *app.rglob('*')):
+    relative='.' if path == app else str(path.relative_to(app))
+    try:
+        attributes=list_xattrs_without_following_symlinks(path)
+    except OSError as error:
+        failures.append(f'Could not inspect extended attributes at {relative}: {error}')
+        continue
+    if 'com.apple.quarantine' in attributes:
+        failures.append(f'Quarantine attribute in app bundle: {relative}')
 forbidden=[bytes.fromhex('53504446').lower(),bytes.fromhex('6e697373657761617264'),b'/Users/',b'/Volumes/External']
 for p in app.rglob('*'):
     if not p.is_file() or p.name in ['embedded.provisionprofile','CodeResources']: continue

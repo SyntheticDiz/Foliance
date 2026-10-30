@@ -44,3 +44,7 @@ No publishing credentials, private keys, passwords or API tokens are committed o
 - [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
 - [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/)
 - [App Store Connect](https://appstoreconnect.apple.com/)
+
+## Packaging metadata
+
+The builder recreates its generated app bundle and copies inputs without extended attributes. It removes a propagated quarantine marker only from the validated provisioning profile’s copy inside the generated bundle before signing; the original profile remains untouched. The release audit rejects quarantined bundle entries. Inspect the expanded installer as well as the signed app when resolving Apple processing error 91109. A failed-processing upload may reuse its build number after the issue is fixed.

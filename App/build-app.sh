@@ -41,6 +41,9 @@ if [[ "$MODE" == store || "${FOLIANCE_UNIVERSAL:-0}" == 1 ]]; then
     ARCH_ARGS=(--arch arm64 --arch x86_64)
 fi
 APP_DIR="$PROJECT_DIR/dist/$MODE/Foliance.app"
+# Recreate only the generated bundle so attributes on an earlier build cannot
+# survive when its files are replaced. The downloaded profile stays untouched.
+rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 # Release artifacts use stable compiler paths, so the author's home/workspace
 # cannot be recovered from file macros or debug references in shipped code.
@@ -48,16 +51,16 @@ swift build -c release "${ARCH_ARGS[@]}" \
     -Xswiftc -file-prefix-map -Xswiftc "$PROJECT_DIR=/Foliance" \
     -Xcc "-ffile-prefix-map=$PROJECT_DIR=/Foliance"
 BIN_DIR="$(swift build -c release "${ARCH_ARGS[@]}" --show-bin-path)"
-cp "$BIN_DIR/Foliance" "$APP_DIR/Contents/MacOS/Foliance.next"
+cp -X "$BIN_DIR/Foliance" "$APP_DIR/Contents/MacOS/Foliance.next"
 chmod +x "$APP_DIR/Contents/MacOS/Foliance.next"
 mv -f "$APP_DIR/Contents/MacOS/Foliance.next" "$APP_DIR/Contents/MacOS/Foliance"
 strip -S "$APP_DIR/Contents/MacOS/Foliance"
-cp Config/Info.plist "$APP_DIR/Contents/Info.plist"
-cp Config/PrivacyInfo.xcprivacy "$APP_DIR/Contents/Resources/PrivacyInfo.xcprivacy"
-cp AppStore/Privacy.md "$APP_DIR/Contents/Resources/Privacy.md"
+cp -X Config/Info.plist "$APP_DIR/Contents/Info.plist"
+cp -X Config/PrivacyInfo.xcprivacy "$APP_DIR/Contents/Resources/PrivacyInfo.xcprivacy"
+cp -X AppStore/Privacy.md "$APP_DIR/Contents/Resources/Privacy.md"
 mkdir -p "$APP_DIR/Contents/Resources/ThirdPartyLicenses"
-cp ThirdPartyLicenses/* "$APP_DIR/Contents/Resources/ThirdPartyLicenses/"
-cp LICENSE "$APP_DIR/Contents/Resources/ThirdPartyLicenses/Foliance-MIT.txt"
+cp -R -X ThirdPartyLicenses/. "$APP_DIR/Contents/Resources/ThirdPartyLicenses/"
+cp -X LICENSE "$APP_DIR/Contents/Resources/ThirdPartyLicenses/Foliance-MIT.txt"
 if [[ ! -f Assets/Foliance.png ]]; then swift scripts/generate-icon.swift; fi
 ICONSET="$PROJECT_DIR/.build/Foliance.iconset"
 mkdir -p "$ICONSET"
@@ -69,7 +72,7 @@ done
 iconutil -c icns "$ICONSET" -o "$APP_DIR/Contents/Resources/Foliance.icns"
 # Native macOS icon asset catalog, including the 1024-pixel App Store icon.
 mkdir -p "$PROJECT_DIR/.build/Assets.xcassets/AppIcon.appiconset"
-cp "$ICONSET"/*.png "$PROJECT_DIR/.build/Assets.xcassets/AppIcon.appiconset/"
+cp -X "$ICONSET"/*.png "$PROJECT_DIR/.build/Assets.xcassets/AppIcon.appiconset/"
 python3 scripts/icon-catalog.py "$PROJECT_DIR/.build/Assets.xcassets/AppIcon.appiconset"
 xcrun actool --compile "$APP_DIR/Contents/Resources" --platform macosx \
     --minimum-deployment-target 26.0 --app-icon AppIcon \
@@ -96,7 +99,12 @@ if [[ "$MODE" == store ]]; then
     : "${FOLIANCE_TEAM_ID:?Set your Apple Developer Team ID in the environment.}"
     : "${FOLIANCE_PROVISION_PROFILE:?Set a path to the Mac App Store distribution provisioning profile.}"
     python3 scripts/store-entitlements.py "$FOLIANCE_PROVISION_PROFILE" "$FOLIANCE_TEAM_ID" "$PROJECT_DIR/.build/Store.entitlements"
-    cp "$FOLIANCE_PROVISION_PROFILE" "$APP_DIR/Contents/embedded.provisionprofile"
+    cp -X "$FOLIANCE_PROVISION_PROFILE" "$APP_DIR/Contents/embedded.provisionprofile"
+    # macOS may propagate a valid quarantine marker despite cp -X. Remove only
+    # that marker from the copied bundle artifact; never touch the source profile.
+    if xattr -p com.apple.quarantine "$APP_DIR/Contents/embedded.provisionprofile" >/dev/null 2>&1; then
+        xattr -d com.apple.quarantine "$APP_DIR/Contents/embedded.provisionprofile"
+    fi
     codesign --force --options runtime --timestamp --sign "$FOLIANCE_APP_SIGN_IDENTITY" \
         --entitlements "$PROJECT_DIR/.build/Store.entitlements" "$APP_DIR"
 else
