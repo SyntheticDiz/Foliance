@@ -220,3 +220,5 @@ h1 em, h2 em { color: var(--terracotta-deep); font-weight: 400; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.provider-separator { margin-top: 26px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.18); }

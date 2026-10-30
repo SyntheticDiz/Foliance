@@ -37,8 +37,8 @@
         <details class="faq-item" open>
           <summary><span class="faq-number">01</span><span>Why is AI analysis unavailable?</span><span class="summary-plus" aria-hidden="true"></span></summary>
           <div class="faq-answer">
-            <p>AI analysis requires a compatible Apple silicon Mac running macOS 26 or later, with Apple Intelligence enabled and a downloaded model that supports the selected analysis language.</p>
-            <p>Check Apple Intelligence in System Settings, allow any model download to finish, then try again. You can still read and search available PDF text without starting AI analysis.</p>
+            <p>For Apple Intelligence, use a compatible Apple silicon Mac running macOS 26 or later, enable Apple Intelligence, and let its English model finish downloading. For OpenAI API, add your own API key, select an available model, and grant document-sharing consent in Foliance Settings.</p>
+            <p>If OpenAI returns an access or quota error, check the key’s permissions, model access, and API billing. Foliance does not switch providers silently. You can still read and search available PDF text without starting AI analysis.</p>
           </div>
         </details>
         <details class="faq-item">
@@ -72,8 +72,8 @@
         <details class="faq-item">
           <summary><span class="faq-number">06</span><span>Does Foliance need an internet connection?</span><span class="summary-plus" aria-hidden="true"></span></summary>
           <div class="faq-answer">
-            <p>Reading, local search, and reviewing saved work are designed to work offline. Apple may require a connection to download its on-device model. Opening a link in your browser sends that request to the linked website.</p>
-            <p>Foliance does not send your PDF to a developer server or third-party AI service.</p>
+            <p>Reading, local search, and reviewing saved work work offline. Apple may need a connection to download its on-device model. OpenAI API needs an internet connection for each request. Opening a link in your browser sends a request to that website.</p>
+            <p>With Apple Intelligence, document content stays on your Mac. If you choose OpenAI API and grant consent, task content is sent directly to OpenAI using your own key. API usage is billed to your OpenAI account. You can remove the key or revoke consent in Settings.</p>
           </div>
         </details>
       </div>

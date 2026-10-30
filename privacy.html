@@ -27,8 +27,8 @@
   <main id="main" class="wrap page-main privacy-main">
     <section class="page-intro" aria-labelledby="privacy-title">
       <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> PRIVACY, IN PLAIN LANGUAGE</p>
-      <h1 id="privacy-title">Your documents stay<br><em>on your Mac.</em></h1>
-      <p class="page-lede">Foliance is designed for local document work. This page explains what stays in the app, what you choose to share, and what is separate about this support website.</p>
+      <h1 id="privacy-title">Your documents.<br><em>Your choice.</em></h1>
+      <p class="page-lede">Foliance keeps saved work on your Mac and lets you choose on-device Apple Intelligence or optional OpenAI API processing. This page explains the difference.</p>
       <p class="effective-date">Effective 30 October 2026</p>
     </section>
 
@@ -47,14 +47,17 @@
           <span class="policy-index">01</span>
           <h2>Data in the app</h2>
           <p>Foliance reads PDFs that you choose. Document text, summaries, questions, notes, selected passages, recent-file bookmarks, and saved work remain in Foliance's own local app container on your Mac.</p>
-          <p>Foliance has no account system, advertisements, tracking, analytics SDK, cloud synchronization, or embedded credentials. The app does not send your documents to a developer server or a third-party AI service.</p>
+          <p>Foliance has no Foliance account system, advertisements, tracking, analytics SDK, cloud synchronization, or developer-provided API keys. The developer does not receive your PDFs through a Foliance backend. If you choose OpenAI API, document content is sent directly to OpenAI as described below.</p>
         </section>
 
         <section id="ai-processing" class="policy-section">
           <span class="policy-index">02</span>
-          <h2>On-device AI processing</h2>
-          <p>AI analysis uses Apple's on-device Foundation Models. It requires a compatible Apple silicon Mac, macOS 26 or later, Apple Intelligence enabled, and a downloaded model that supports the selected language.</p>
+          <h2>Your AI provider</h2>
+          <p><strong>Apple Intelligence:</strong> analysis uses Apple’s on-device Foundation Models. It requires a compatible Apple silicon Mac, macOS 26 or later, enabled Apple Intelligence, and a downloaded English model. Document content stays on your Mac for this provider.</p>
           <p>Apple may require an internet connection to download its system model. Apple handles system downloads and diagnostics under its own policies. Reading, local search, and reviewing available results do not require sending document content to a cloud AI service.</p>
+          <p><strong>OpenAI API (optional):</strong> when you select it and grant consent, Foliance sends the extracted document text and passages needed for the task, relevant reference-document content and comparison criteria, your reading goal, and your questions directly to OpenAI. Requests authenticate with your own API key. OpenAI API usage is billed to your API account.</p>
+          <p>Your key is stored in Foliance’s own, non-synchronizing Keychain entry. It is not saved in ordinary preferences, work documents, exports, or the public website. You can remove the key and revoke document-sharing consent in Settings. Foliance does not silently fall back to OpenAI.</p>
+          <p>Foliance requests that OpenAI responses not be stored for later retrieval. This does not remove all service retention: OpenAI may keep prompts and responses in abuse-monitoring logs under its <a href="https://developers.openai.com/api/docs/guides/your-data">API data controls</a>. Do not assume zero retention.</p>
           <p>AI interpretations are not verified facts. Check findings and quotations against the original PDF.</p>
         </section>
 
@@ -82,7 +85,7 @@
 
         <div class="policy-endnote">
           <span class="endnote-mark" aria-hidden="true"></span>
-          <p><strong>In brief:</strong> Foliance keeps document work on your Mac. You choose what to export or share. The hosting provider's website request handling is separate from the app.</p>
+          <p><strong>In brief:</strong> Saved work stays on your Mac. Apple Intelligence is on device; optional OpenAI processing sends task content to OpenAI after consent. GitHub’s website request handling is separate from app processing.</p>
         </div>
       </article>
     </div>
