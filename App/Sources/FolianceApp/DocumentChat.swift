@@ -3,23 +3,23 @@ import SwiftUI
 /// Physical page numbers remain unchanged even when the input has gaps.
 enum PageScope {
     static func parse(_ text: String, count: Int) throws -> [Int] {
-        guard count > 0 else { throw AppError(message: "Het document bevat geen pagina’s.") }
+        guard count > 0 else { throw AppError(message: "The document has no pages.") }
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return Array(1...count) }
         var pages = Set<Int>()
         for component in text.replacingOccurrences(of: "–", with: "-").replacingOccurrences(of: "—", with: "-").split(separator: ",", omittingEmptySubsequences: false) {
             let bounds = component.split(separator: "-", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
             guard (1...2).contains(bounds.count), let first = Int(bounds[0]), first >= 1, first <= count,
                   let last = Int(bounds.last!), last >= first, last <= count else {
-                throw AppError(message: "Gebruik fysieke PDF-pagina’s 1 t/m \(count), bijvoorbeeld 3–7, 12. Controleer de invoer.")
+                throw AppError(message: "Use physical PDF pages 1 through \(count), for example 3–7, 12. Check your entry.")
             }
             pages.formUnion(first...last)
         }
         return pages.sorted()
     }
     static func validated(_ selected: [Int], count: Int) throws -> [Int] {
-        guard !selected.isEmpty else { throw AppError(message: "De chat heeft geen paginaselectie ontvangen. Sluit de chat en open hem opnieuw.") }
+        guard !selected.isEmpty else { throw AppError(message: "The chat received no page selection. Close it and open it again.") }
         guard count > 0, selected.allSatisfy({ $0 >= 1 && $0 <= count }) else {
-            throw AppError(message: "De paginaselectie hoort niet bij dit document. Open de chat opnieuw met geldige PDF-pagina’s.")
+            throw AppError(message: "The page selection does not match this document. Reopen the chat with valid PDF pages.")
         }
         return Array(Set(selected)).sorted()
     }
@@ -28,8 +28,8 @@ enum PageScope {
         return pages.enumerated().map { set.contains($0.offset + 1) ? $0.element : "" }
     }
     static func label(_ selected: [Int], count: Int) -> String {
-        if selected == Array(1...max(1, count)) { return "Hele document (\(count) " + (count == 1 ? "pagina" : "pagina’s") + ")" }
-        return "PDF-pagina’s " + selected.map(String.init).joined(separator: ", ")
+        if selected == Array(1...max(1, count)) { return "Entire document (\(count) " + (count == 1 ? "page" : "pages") + ")" }
+        return "PDF pages " + selected.map(String.init).joined(separator: ", ")
     }
 }
 
@@ -106,26 +106,26 @@ enum DocumentChatService {
         return sources
     }
     static func validate(_ answer: ChatAnswer, sources: [ChatSource]) throws -> ChatAnswer {
-        guard !answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AppError(message: "Het model gaf geen antwoord. Probeer je vraag anders te formuleren.") }
+        guard !answer.answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AppError(message: "The model returned no answer. Try rephrasing your question.") }
         guard !answer.citations.isEmpty, answer.citations.allSatisfy({ citation in
             sources.contains { $0.id == citation.sourceID && AIService.contains(quote: citation.quote, page: 1, pages: [$0.text]) }
-        }) else { throw AppError(message: "Het antwoord had geen geldige broncitaten. Het wordt niet getoond. Stel je vraag specifieker of kies een kleinere paginaselectie.") }
+        }) else { throw AppError(message: "The answer had no valid source quotations and will not be shown. Ask a more specific question or select fewer pages.") }
         return answer
     }
     static func answer(question: String, pages: [String], selected: [Int], name: String, program: PartyProgram?, focus: String, model: String, history: [ChatMessage], passage: String? = nil) async throws -> (ChatAnswer, [ChatSource]) {
-        guard question.utf8.count <= 700 else { throw AppError(message: "Houd je vraag onder 700 bytes.") }
+        guard question.utf8.count <= 700 else { throw AppError(message: "Keep your question under 700 bytes.") }
         let selected = try PageScope.validated(selected, count: pages.count)
         let recent = bounded(history.suffix(2).map { ($0.isUser ? "Gebruiker: " : "Eerder antwoord (geen bron): ") + String($0.text.prefix(180)) }.joined(separator: "\n"), bytes: 400)
         let query = question + " " + (history.last(where: \.isUser)?.text ?? "")
         let sourcePages: [String]
         if let passage {
             guard selected.count == 1, AIService.contains(quote: passage, page: selected[0], pages: pages) else {
-                throw AppError(message: "De passage kon niet in de bron worden bevestigd.")
+                throw AppError(message: "The passage could not be verified in the source.")
             }
             sourcePages = pages.indices.map { $0 + 1 == selected[0] ? passage : "" }
         } else { sourcePages = pages }
         let sources = retrieve(pages: sourcePages, selected: selected, question: query, name: name, program: program)
-        guard sources.contains(where: { !$0.isProgram }) else { throw AppError(message: "De gekozen pagina’s bevatten geen leesbare tekst.") }
+        guard sources.contains(where: { !$0.isProgram }) else { throw AppError(message: "The selected pages contain no readable text.") }
         let model = try await AIRouting.resolve(model)
         let citation: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["sourceID", "quote"], "properties": ["sourceID": ["type": "string"], "quote": ["type": "string"]]]
         let schema: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["answer", "citations"], "properties": ["answer": ["type": "string"], "citations": ["type": "array", "maxItems": 3, "items": citation]]]
@@ -205,15 +205,15 @@ struct DocumentChatView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(UIStrings.text("Chat over \(pages.count == document.pages.count ? "het document" : "pagina’s")")).font(.title2.bold())
+                Text(pages.count == document.pages.count ? "Chat about the document" : "Chat about pages").font(.title2.bold())
                 Spacer()
-                Button(UIStrings.text(embedded ? "Terug naar overzicht" : "Gereed")) { if let close { close() } else { dismiss() } }
+                Button(embedded ? "Back to overview" : "Done") { if let close { close() } else { dismiss() } }
             }
             if let passage {
-                DisclosureGroup(UIStrings.text("Geselecteerde passage")) { Text(passage).font(.callout).textSelection(.enabled) }
+                DisclosureGroup("Selected passage") { Text(passage).font(.callout).textSelection(.enabled) }
             }
             Text(UIStrings.text(PageScope.label(pages, count: document.pages.count))).font(.caption).lineLimit(3)
-            Text(UIStrings.text(AIConfiguration.label(model) + " · Per vraag worden passende bronfragmenten opgehaald. Dit is geen volledige controle van alle tekst. Gesprekken worden lokaal bewaard bij dit document en dit bereik.")).font(.caption).foregroundStyle(.secondary)
+            Text(AIConfiguration.label(model) + " · Relevant source excerpts are retrieved for each question. This is not a complete review of all text. Conversations are saved locally for this document and scope.").font(.caption).foregroundStyle(.secondary)
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
@@ -223,19 +223,19 @@ struct DocumentChatView: View {
                     }
                 }.onChange(of: session.messages.count) { _, _ in if let id = session.messages.last?.id { proxy.scrollTo(id, anchor: .bottom) } }
             }
-            if session.busy { HStack { ProgressView().controlSize(.small); Text(UIStrings.text("Bronnen vergelijken…")); Button(UIStrings.text("Stop")) { session.cancel() } } }
+            if session.busy { HStack { ProgressView().controlSize(.small); Text("Comparing sources…"); Button("Stop") { session.cancel() } } }
             if let error = session.error { Text(UIStrings.text(error)).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
             HStack(alignment: .bottom) {
-                TextField(UIStrings.text("Vraag over de geselecteerde tekst…"), text: $draft, axis: .vertical).lineLimit(2...5).textFieldStyle(FocusInputFieldStyle()).tutorialTarget("chat")
+                TextField("Question about the selected text…", text: $draft, axis: .vertical).lineLimit(2...5).textFieldStyle(FocusInputFieldStyle()).tutorialTarget("chat")
                     .onKeyPress(keys: [.return], phases: .down) { press in
                         if press.modifiers.contains(.shift) { return .ignored }
                         submit(); return .handled
                     }
-                Button(UIStrings.text("Verstuur"), systemImage: "paperplane") {
+                Button("Send", systemImage: "paperplane") {
                     submit()
                 }.disabled(session.busy || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.utf8.count > 700)
             }
-            Text(UIStrings.text("\(draft.utf8.count) / 700 bytes · Enter: versturen · Shift+Enter: nieuwe regel")).font(.caption).foregroundStyle(.secondary)
+            Text("\(draft.utf8.count) / 700 bytes · Enter: send · Shift+Enter: new line").font(.caption).foregroundStyle(.secondary)
         }.padding(24).frame(width: embedded ? nil : 740, height: embedded ? nil : 680)
         .task {
             if !initialQuestion.isEmpty && session.messages.isEmpty {
@@ -248,7 +248,7 @@ struct DocumentChatView: View {
     }
     private func messageView(_ message: ChatMessage) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(UIStrings.text(message.isUser ? "Jij" : "AI · controleer aan de bron")).font(.caption.bold())
+            Text(message.isUser ? "You" : "AI · verify against sources").font(.caption.bold())
             Text(message.text).textSelection(.enabled)
             ForEach(Array(message.citations.enumerated()), id: \.offset) { item in
                 citationView(item.element, message: message)
@@ -260,9 +260,9 @@ struct DocumentChatView: View {
         if let source = message.sources.first(where: { $0.id == citation.sourceID }) {
             Text("‘\(citation.quote)’").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
             if source.isProgram {
-                Text(UIStrings.text("Reference document: " + source.name + " · p. " + String(source.page))).font(.caption)
+                Text("Reference document: " + source.name + " · p. " + String(source.page)).font(.caption)
             } else {
-                Button(UIStrings.text("Toon PDF-pagina \(source.page)")) { showSource(source.page, citation.quote); if !embedded { dismiss() } }
+                Button("Show PDF page \(source.page)") { showSource(source.page, citation.quote); if !embedded { dismiss() } }
             }
         }
     }

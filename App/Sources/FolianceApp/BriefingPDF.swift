@@ -122,7 +122,7 @@ enum BriefingPDF {
         }
         layout.heading(title ?? (!chosenPassages.isEmpty ? "Document summary" : neutral ? "Document summary" : analyzed ? "Document brief" : "Keyword selection"), size: 28)
         layout.paragraph("Source document: " + document.name, size: 12)
-        layout.paragraph("Foliance | Export date: " + date.formatted(date: .abbreviated, time: .shortened), size: 9, color: darkGray)
+        layout.paragraph("Foliance | Export date: " + date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(Locale(identifier: "en_US"))), size: 9, color: darkGray)
         if !focus.isEmpty { layout.paragraph(focus, size: 9, color: darkGray) }
         if !notice.isEmpty { layout.heading("Processing incomplete", size: 12); layout.paragraph(UIStrings.text(notice), size: 10) }
         var links: [Link] = []

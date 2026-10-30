@@ -7,7 +7,7 @@ struct PassageQuestion: Codable, Sendable, Equatable {
 
 enum PassageQuestions {
     static func generate(passage: String, model: String, focus: String = "", existing: [PassageQuestion] = [], progress: @escaping ([PassageQuestion]) async -> Void = { _ in }, request: AIService.Request? = nil) async throws -> [PassageQuestion] {
-        guard !passage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AppError(message: "Deze passage bevat geen leesbare tekst.") }
+        guard !passage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AppError(message: "This passage contains no readable text.") }
         if request == nil { _ = try await AIRouting.resolve(model) }
         return try await ApplePassageQuestions.generate(passage: passage, focus: focus, existing: existing, progress: progress,
                                                        request: request ?? AIService.response(for: model), useCache: request == nil && !AIConfiguration.isChatGPT(model))

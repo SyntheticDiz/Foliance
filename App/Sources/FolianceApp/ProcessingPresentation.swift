@@ -9,11 +9,11 @@ enum ProcessingStageState: Equatable {
 
 struct ProcessingPresentation {
     enum Stage: String, CaseIterable {
-        case document = "Document lezen"
-        case committee = "Gerichte beoordeling"
-        case points = "Punten"
-        case summary = "Samenvatting"
-        case highlights = "Kernselectie"
+        case document = "Read document"
+        case committee = "Profile review"
+        case points = "Findings"
+        case summary = "Document overview"
+        case highlights = "Key passages"
     }
 
     let primaryStatus: String
@@ -31,8 +31,8 @@ struct ProcessingPresentation {
         let active = busy ? (committeeIncluded && committeeActive ? Stage.committee : Self.knownStage(for: status)) : nil
         stages = committeeIncluded ? [.document, .committee, .points, .summary, .highlights] : [.document, .points, .summary, .highlights]
         activeStage = active
-        primaryStatus = busy ? (active.map(Self.primaryLabel(for:)) ?? "Verwerking bezig")
-            : (completed ? "Document klaar" : "Verwerking vraagt aandacht")
+        primaryStatus = busy ? (active.map(Self.primaryLabel(for:)) ?? "Processing")
+            : (completed ? "Document ready" : "Processing needs attention")
 
         var states: [Stage: ProcessingStageState] = [
             .document: Self.state(ready: documentReady && documentPresent,
@@ -50,16 +50,16 @@ struct ProcessingPresentation {
 
     static func knownStage(for status: String) -> Stage? {
         let value = status.lowercased()
-        if value.hasPrefix("voorbereiding voor ") { return .committee }
-        if value.hasPrefix("pdf inladen") || value.hasPrefix("pdf lezen") { return .document }
-        if value.hasPrefix("kernpunten beoordelen") { return .highlights }
-        if value.hasPrefix("document samenvatten") || value.hasPrefix("documentsamenvatting samenvoegen") ||
-            value.hasPrefix("hoofdpunten samenvoegen") { return .summary }
-        if value.hasPrefix("alinea ") || value.hasPrefix("alineapunten:") ||
-            value.hasPrefix("neutrale samenvattingspunten maken") ||
-            value.hasPrefix("vergelijken met referentiedocument") ||
-            value.hasPrefix("programmapassages vergelijken") || value.hasPrefix("samenhang controleren") ||
-            value.hasPrefix("bronnen controleren") || value.hasPrefix("ai-analyse") {
+        if value.hasPrefix("preparing profile review") || value.hasPrefix("reviewing profile") { return .committee }
+        if value.hasPrefix("loading pdf") || value.hasPrefix("reading pdf") { return .document }
+        if value.hasPrefix("reviewing key passages") { return .highlights }
+        if value.hasPrefix("summarizing document") || value.hasPrefix("merging document overview") ||
+            value.hasPrefix("merging key points") { return .summary }
+        if value.hasPrefix("paragraph findings:") || value.hasPrefix("paragraph points:") ||
+            value.hasPrefix("creating overview findings") ||
+            value.hasPrefix("comparing with reference document") ||
+            value.hasPrefix("checking source relationships") || value.hasPrefix("source checks") ||
+            value.hasPrefix("ai analysis") {
             return .points
         }
         return nil
@@ -74,11 +74,11 @@ struct ProcessingPresentation {
 
     private static func primaryLabel(for stage: Stage) -> String {
         switch stage {
-        case .document: "Document lezen"
-        case .committee: "Gerichte beoordeling"
-        case .points: "Punten samenstellen"
-        case .summary: "Samenvatting samenstellen"
-        case .highlights: "Kernselectie samenstellen"
+        case .document: "Reading document"
+        case .committee: "Reviewing profile"
+        case .points: "Preparing findings"
+        case .summary: "Preparing document overview"
+        case .highlights: "Preparing key passages"
         }
     }
 }

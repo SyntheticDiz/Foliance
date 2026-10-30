@@ -51,7 +51,7 @@ struct TableExplanationView: View {
                         animateDisclosure { expanded.toggle() }
                     } label: {
                         HStack {
-                            Text(UIStrings.text("Tabellen uitgelegd · \(tables.count)"))
+                            Text(UIStrings.text("Table explanations · \(tables.count)"))
                                 .font(.title3.weight(.semibold))
                             Spacer()
                             Image(systemName: "chevron.down")
@@ -61,11 +61,11 @@ struct TableExplanationView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityValue(UIStrings.text(expanded ? "Uitgeklapt" : "Ingeklapt"))
+                    .accessibilityValue(expanded ? "Expanded" : "Collapsed")
                     .tutorialTarget("table")
 
                     if expanded {
-                        Text(UIStrings.text("Herkende tabellen en leespunten. Afbeeldingstabellen worden lokaal met OCR gelezen en moeten aan de bron worden gecontroleerd."))
+                        Text(UIStrings.text("Recognized tables and reading points. Image tables are read locally with OCR and must be checked against the source."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -179,11 +179,11 @@ private struct TableExplanationCard: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(table.displayTitle).font(.headline)
                         if table.displayTitle != table.title {
-                            Text(UIStrings.text("Tabeltitel bron: ") + table.title)
+                            Text(UIStrings.text("Table title in source: ") + table.title)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        Text(UIStrings.text("Bronpagina ") + table.pages.map(String.init).joined(separator: ", "))
+                        Text(UIStrings.text("Source page ") + table.pages.map(String.init).joined(separator: ", "))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         if table.recognizedWithOCR == true {
@@ -199,14 +199,14 @@ private struct TableExplanationCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
-            .accessibilityValue(UIStrings.text(isOpen ? "Uitgeklapt" : "Ingeklapt"))
+            .accessibilityValue(isOpen ? "Expanded" : "Collapsed")
 
             // Keep active work and the compact OCR status available even when the
             // detailed row is closed, without expanding every table in long lists.
             if isAnalyzingThisTable {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(UIStrings.text("Tabelleespunten selecteren…"))
+                    Text(UIStrings.text("Selecting table findings…"))
                     Button(UIStrings.text("Stop")) { stopAnalysis?() }
                         .buttonStyle(FocusQuietActionStyle())
                 }
@@ -228,7 +228,7 @@ private struct TableExplanationCard: View {
 
                 if !table.cautions.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(UIStrings.text("Let op bij het lezen")).font(.subheadline.weight(.semibold))
+                        Text(UIStrings.text("Notes for reading")).font(.subheadline.weight(.semibold))
                         ForEach(Array(table.cautions.enumerated()), id: \.offset) { _, caution in
                             Text(caution)
                                 .foregroundStyle(.secondary)
@@ -241,13 +241,13 @@ private struct TableExplanationCard: View {
                 sourcePageActions
 
                 if table.recognizedWithOCR == true {
-                    disclosureSection("Tabelgegevens", isExpanded: $tableDataExpanded) {
+                    disclosureSection("Table details", isExpanded: $tableDataExpanded) {
                         OCRTableDataContent(table: table)
                     }
-                    disclosureSection("Leespunten", isExpanded: $readingPointsExpanded) {
+                    disclosureSection("Reading notes", isExpanded: $readingPointsExpanded) {
                         TableReadingPointsContent(table: table)
                     }
-                    disclosureSection("Controle en correcties", isExpanded: $controlsExpanded) {
+                    disclosureSection("Checks and corrections", isExpanded: $controlsExpanded) {
                         TableReviewControls(
                             table: table,
                             validation: validation,
@@ -261,7 +261,7 @@ private struct TableExplanationCard: View {
                         )
                     }
                 } else {
-                    disclosureSection("Leespunten", isExpanded: $readingPointsExpanded) {
+                    disclosureSection("Reading notes", isExpanded: $readingPointsExpanded) {
                         TableReadingPointsContent(table: table)
                     }
                 }
@@ -287,7 +287,7 @@ private struct TableExplanationCard: View {
     }
 
     private func pageButton(_ page: Int) -> some View {
-        Button(UIStrings.text("Toon in PDF · p. \(page)"), systemImage: "doc.text.magnifyingglass") {
+        Button(UIStrings.text("Show in PDF · p. \(page)"), systemImage: "doc.text.magnifyingglass") {
             showPage(page)
         }
         .buttonStyle(FocusQuietActionStyle())
@@ -313,7 +313,7 @@ private struct TableExplanationCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(FocusQuietActionStyle())
-            .accessibilityValue(UIStrings.text(isExpanded.wrappedValue ? "Uitgeklapt" : "Ingeklapt"))
+            .accessibilityValue(isExpanded.wrappedValue ? "Expanded" : "Collapsed")
 
             if isExpanded.wrappedValue { content() }
         }
@@ -327,9 +327,9 @@ private struct OCRStatusLine: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(UIStrings.text(confirmed ? "OCR · door jou gecontroleerd" : "OCR · nog controleren"))
+            Text(UIStrings.text(confirmed ? "OCR · checked by you" : "OCR · needs review"))
                 .foregroundStyle(confirmed ? Color.secondary : Color.orange)
-            Text(UIStrings.text("\(unresolvedCount) onzekere cellen"))
+            Text("\(unresolvedCount) unresolved \(unresolvedCount == 1 ? "cell" : "cells")")
                 .foregroundStyle(.secondary)
         }
         .font(.caption)
@@ -342,7 +342,7 @@ private struct OCRTableDataContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(UIStrings.text("Herkende cellen — controleer cijfers, mintekens en kolommen in de PDF. ‘Onleesbaar’ betekent dat er een teken staat dat OCR niet kon lezen. Lege cellen zijn geen nul. De gewone documentanalyse gebruikt deze OCR-tekst niet. Na jouw broncontrole kun je afzonderlijke tabelleespunten laten kiezen."))
+            Text(UIStrings.text("Recognized cells — check figures, minus signs, and columns in the PDF. ‘Unreadable’ means a character is present that OCR could not read. Empty cells are not zero. The regular document analysis does not use this OCR text. After checking the source, you can select separate table findings."))
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
             ScrollView(.horizontal) {
@@ -379,7 +379,7 @@ private struct TableReadingPointsContent: View {
         VStack(alignment: .leading, spacing: 10) {
             if table.isOCRConfirmed, let digest = table.ocrReview?.summary {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(UIStrings.text("Gecontroleerde tabelgegevens")).font(.subheadline.weight(.semibold))
+                    Text(UIStrings.text("Reviewed table data")).font(.subheadline.weight(.semibold))
                     Text(digest.overview).font(.caption).fixedSize(horizontal: false, vertical: true)
                     ForEach(Array(digest.bullets.enumerated()), id: \.offset) { _, fact in
                         Text(UIStrings.text("• ") + fact).textSelection(.enabled)
@@ -388,7 +388,7 @@ private struct TableReadingPointsContent: View {
             }
             if !table.bullets.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(UIStrings.text("Oorspronkelijke leespunten")).font(.subheadline.weight(.semibold))
+                    Text(UIStrings.text("Original reading points")).font(.subheadline.weight(.semibold))
                     ForEach(Array(table.bullets.enumerated()), id: \.offset) { _, text in
                         Text(UIStrings.text("• ") + text)
                             .fixedSize(horizontal: false, vertical: true)
@@ -414,7 +414,7 @@ private struct TableReviewControls: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let validation {
-                Text(UIStrings.text("\(validation.unresolvedCells.count) onzekere cellen · \(validation.checks.filter { $0.state == .matched }.count) rekencontroles sluiten aan"))
+                Text("\(validation.unresolvedCells.count) unresolved \(validation.unresolvedCells.count == 1 ? "cell" : "cells") · \(validation.checks.filter { $0.state == .matched }.count) calculation checks match")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if !validation.checks.isEmpty {
@@ -429,15 +429,15 @@ private struct TableReviewControls: View {
                 }
             }
             if canReview {
-                Button(UIStrings.text("Controleer of corrigeer cellen"), systemImage: "pencil.and.list.clipboard", action: review)
+                Button(UIStrings.text("Review or correct cells"), systemImage: "pencil.and.list.clipboard", action: review)
                     .buttonStyle(FocusSecondaryButtonStyle())
                     .disabled(reviewDisabled || analysisID != nil)
-                Text(UIStrings.text("Bewaar daarna een werkdocument (⌘S) om correcties en broncontrole later te herstellen."))
+                Text(UIStrings.text("Save a workspace (⌘S) to restore corrections and source review later."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             if canAnalyze {
-                Button(UIStrings.text("Analyseer gecontroleerde tabel"), systemImage: "sparkles", action: analyze)
+                Button("Analyze reviewed table", systemImage: "sparkles", action: analyze)
                     .buttonStyle(FocusSecondaryButtonStyle())
                     .disabled(reviewDisabled || analysisID != nil || !table.isOCRConfirmed || !(validation?.canConfirm ?? false))
             }

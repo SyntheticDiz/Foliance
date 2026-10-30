@@ -13,21 +13,21 @@ struct SavedWorkspaceExtrasView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(UIStrings.text("Bewaarde antwoorden")).font(.title2.weight(.semibold))
+                Text(UIStrings.text("Saved answers")).font(.title2.weight(.semibold))
                 Spacer()
-                Button(UIStrings.text("Sluiten")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(UIStrings.text("Close")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            Text(UIStrings.text("Deze antwoorden zijn bewaard. Openen vraagt geen nieuwe AI-analyse."))
+            Text(UIStrings.text("These answers are saved. Opening them does not request a new AI analysis."))
                 .font(.callout).foregroundStyle(.secondary)
             List {
                 if !threads.isEmpty {
-                    Section(UIStrings.text("Gesprekken")) {
+                    Section(UIStrings.text("Conversations")) {
                         ForEach(threads.reversed()) { thread in
                             Button { openThread(thread) } label: {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(thread.messages.first(where: \.isUser)?.text ?? UIStrings.text("Documentchat"))
+                                    Text(thread.messages.first(where: \.isUser)?.text ?? UIStrings.text("Document chat"))
                                         .lineLimit(2).multilineTextAlignment(.leading)
-                                    Text(UIStrings.text(thread.wholeDocument ? "Hele document" : "PDF-pagina’s " + thread.pages.map(String.init).joined(separator: ", ")) + " · " + AIConfiguration.label(thread.model))
+                                    Text((thread.wholeDocument ? "Entire document" : "PDF pages " + thread.pages.map(String.init).joined(separator: ", ")) + " · " + AIConfiguration.label(thread.model))
                                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                                 }.padding(.vertical, 4).frame(maxWidth: .infinity, alignment: .leading)
                             }.buttonStyle(.plain)
@@ -35,7 +35,7 @@ struct SavedWorkspaceExtrasView: View {
                     }
                 }
                 if !summaries.isEmpty {
-                    Section(UIStrings.text("Selectiesamenvattingen")) {
+                    Section(UIStrings.text("Selection summaries")) {
                         ForEach(summaries.reversed()) { saved in
                             Button { openSummary(saved) } label: {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -47,13 +47,13 @@ struct SavedWorkspaceExtrasView: View {
                     }
                 }
                 if !charts.isEmpty {
-                    Section(UIStrings.text("Diagramuitleg")) {
+                    Section(UIStrings.text("Chart explanation")) {
                         ForEach(charts.reversed()) { chart in
                             Button { openChart(chart) } label: {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(chart.explanation.title.isEmpty ? UIStrings.text("Diagramuitleg") : chart.explanation.title)
+                                    Text(chart.explanation.title.isEmpty ? UIStrings.text("Chart explanation") : chart.explanation.title)
                                         .lineLimit(2)
-                                    Text(UIStrings.text("PDF-pagina \(chart.page)"))
+                                    Text("PDF page \(chart.page)")
                                         .font(.caption).foregroundStyle(.secondary)
                                 }.padding(.vertical, 4).frame(maxWidth: .infinity, alignment: .leading)
                             }.buttonStyle(.plain)

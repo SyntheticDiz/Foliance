@@ -1,6 +1,6 @@
 # Foliance
 
-Foliance is a native macOS PDF reader for understanding reports, project plans and meeting papers while keeping original source passages in view. Version **1.0.0**, build **2**.
+Foliance is a native macOS PDF reader for understanding reports, project plans and meeting papers while keeping original source passages in view. Version **1.0.0**, build **3**.
 
 ## Use
 
@@ -44,14 +44,14 @@ See [distribution instructions](AppStore/Distribution.md), [App Store listing](A
 - [Privacy](https://syntheticdiz.github.io/Foliance/privacy.html)
 - [Public website repository](https://github.com/SyntheticDiz/Foliance)
 
-`SupportSite/` contains the website sources. The public repository contains the free, open-source app and static website. Ignored local submission settings, signing material, personal documents and credentials are excluded.
+`SupportSite/` contains the website sources. The public repository contains the static website at its root and the approved, MIT-licensed application source under `App/`. The initial 230-file application export was verified byte for byte before publication; the source packager maintains an explicit public-test allowlist for subsequent updates. Private research fixtures, local submission settings, signing material, personal documents and credentials are excluded.
 
 ## Project layout
 
 - `Sources/FolianceApp/`: SwiftUI reader, extraction, source-grounded analysis, work files, search and export.
 - `Sources/FolianceCore/`: general document cues and core analysis.
 - `Sources/NativeSearchSupport/`: vendored search dependencies.
-- `Tests/`: focused public offline regressions using fictional data. Internal benchmark/probe tests that reference private research are excluded from this public export.
+- `Tests/`: offline regressions and opt-in rendering/live probes.
 - `Config/`: app identity, sandbox entitlements and required-reason API privacy manifest.
 - `Assets/`: original Foliance icon artwork.
 - `AppStore/`: sample PDF, policy, metadata, review notes and distribution instructions.

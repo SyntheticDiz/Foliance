@@ -23,29 +23,29 @@ struct GlossaryView: View {
     }
     private func meaning(_ entry: GlossaryEntry) -> String {
         own(entry) ?? entry.definitions.first?.text ?? entry.reference?.meaning ??
-            (web(entry)?.certain == true ? web(entry)?.fullName : nil) ?? UIStrings.text("Betekenis niet vastgesteld")
+            (web(entry)?.certain == true ? web(entry)?.fullName : nil) ?? UIStrings.text("Meaning not established")
     }
-    private func label(_ entry: GlossaryEntry) -> String { own(entry) != nil ? "Eigen definitie" : !entry.definitions.isEmpty ? "Uit document" : entry.reference != nil ? "Woordenlijst" : web(entry)?.certain == true ? "Online aangevuld" : web(entry) != nil ? "Betekenis onzeker" : "Onbekend" }
+    private func label(_ entry: GlossaryEntry) -> String { own(entry) != nil ? "Your definition" : !entry.definitions.isEmpty ? "From document" : entry.reference != nil ? "Glossary reference" : web(entry)?.certain == true ? "Online reference" : web(entry) != nil ? "Unverified meaning" : "Unknown" }
     var filtered: [GlossaryEntry] {
         entries.filter { search.isEmpty || ([$0.abbreviation, meaning($0), $0.reference?.meaning ?? ""] + $0.definitions.map(\.text)).joined(separator: " ").localizedCaseInsensitiveContains(search) }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text(UIStrings.text("Afkortingenlijst")).font(.title2.bold())
+                Text(UIStrings.text("Glossary")).font(.title2.bold())
                 Spacer()
-                Button(UIStrings.text("Gereed")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(UIStrings.text("Done")) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             Text(document.name).font(.caption).foregroundStyle(.secondary)
-            Text(UIStrings.text("Betekenissen uit dit document hebben voorrang op de algemene woordenlijst. Je eigen definitie wordt als zodanig gemarkeerd.")).font(.callout).foregroundStyle(.secondary)
-            TextField(UIStrings.text("Zoek afkorting of betekenis…"), text: $search).textFieldStyle(FocusInputFieldStyle())
-            Text(UIStrings.text("Definities komen uit dit document of je eigen woordenlijst. Documentinhoud blijft op deze Mac.")).font(.caption).foregroundStyle(.secondary)
-            if loading { ProgressView(UIStrings.text("Afkortingen verzamelen…")) }
-            else { Text(UIStrings.text("\(filtered.count) afkortingen")).font(.caption) }
+            Text(UIStrings.text("Meanings from this document take precedence over the general glossary. Your own definition is labelled as such.")).font(.callout).foregroundStyle(.secondary)
+            TextField(UIStrings.text("Search abbreviation or meaning…"), text: $search).textFieldStyle(FocusInputFieldStyle())
+            Text(UIStrings.text("Definitions come from this document or your personal glossary. Document content stays on this Mac.")).font(.caption).foregroundStyle(.secondary)
+            if loading { ProgressView(UIStrings.text("Collecting abbreviations…")) }
+            else { Text("\(filtered.count) abbreviations").font(.caption) }
             if let error { Text(UIStrings.text(error)).foregroundStyle(.orange) }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    if !loading && filtered.isEmpty { Text(UIStrings.text("Geen afkortingen gevonden.")) }
+                    if !loading && filtered.isEmpty { Text(UIStrings.text("No abbreviations found.")) }
                     ForEach(filtered) { entry in
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
@@ -57,45 +57,45 @@ struct GlossaryView: View {
                             Text(meaning(entry)).textSelection(.enabled)
                             if let result = web(entry), own(entry) == nil && entry.definitions.isEmpty && entry.reference == nil {
                                 Text(result.explanation).textSelection(.enabled)
-                                if !result.context.isEmpty { Text(UIStrings.text("In dit document") + ": " + result.context).foregroundStyle(.secondary).textSelection(.enabled) }
-                                if let source = result.source { Link(UIStrings.text("Bron bekijken") + " · " + source.title, destination: source.url).font(.callout) }
-                                Text(UIStrings.text("Opgehaald") + ": " + result.date.formatted(date: .abbreviated, time: .omitted) + (result.fresh ? "" : " · " + UIStrings.text("ouder dan 30 dagen"))).font(.caption).foregroundStyle(.secondary)
+                                if !result.context.isEmpty { Text("In this document: " + result.context).foregroundStyle(.secondary).textSelection(.enabled) }
+                                if let source = result.source { Link(UIStrings.text("View source") + " · " + source.title, destination: source.url).font(.callout) }
+                                Text(UIStrings.text("Retrieved") + ": " + result.date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "en_US"))) + (result.fresh ? "" : " · " + UIStrings.text("older than 30 days"))).font(.caption).foregroundStyle(.secondary)
                             }
-                            DisclosureGroup(UIStrings.text("Bronnen en andere betekenissen")) {
+                            DisclosureGroup(UIStrings.text("Sources and other meanings")) {
                                 VStack(alignment: .leading, spacing: 10) {
                                     ForEach(Array(entry.definitions.enumerated()), id: \.offset) { _, value in
-                                        Text(UIStrings.text("In document · PDF-pagina \(value.page)") + ": " + value.text).textSelection(.enabled)
+                                        Text("In document · PDF page \(value.page): " + value.text).textSelection(.enabled)
                                     }
                                     if let reference = entry.reference {
-                                        Text(UIStrings.text("Woordenlijst") + ": \(reference.meaning)")
+                                        Text(UIStrings.text("Reference glossary") + ": \(reference.meaning)")
                                         Text(reference.explanation).foregroundStyle(.secondary)
-                                        Link(UIStrings.text("Officiële toelichting"), destination: reference.url)
+                                        Link(UIStrings.text("Official explanation"), destination: reference.url)
                                     }
                                     if let result = web(entry), let source = result.source {
                                         Text(UIStrings.text(source.kind)).font(.caption).foregroundStyle(.secondary)
-                                        if !result.quote.isEmpty { Text(UIStrings.text("Broncitaat") + ": ‘" + result.quote + "’").textSelection(.enabled) }
+                                        if !result.quote.isEmpty { Text(UIStrings.text("Source quote") + ": ‘" + result.quote + "’").textSelection(.enabled) }
                                         Link(source.title, destination: source.url)
                                     }
                                     if let first = entry.occurrences.first { Text(first.excerpt).font(.callout).textSelection(.enabled) }
                                     ForEach(entry.occurrences, id: \.page) { occurrence in
-                                        Button(UIStrings.text("PDF-pagina \(occurrence.page)")) { showPage(occurrence.page); dismiss() }
+                                        Button("PDF page \(occurrence.page)") { showPage(occurrence.page); dismiss() }
                                     }
                                 }.padding(.top, 8)
                             }
                             HStack {
-                                Button(UIStrings.text(own(entry) == nil ? "Betekenis toevoegen" : "Betekenis aanpassen")) {
+                                Button(own(entry) == nil ? "Add a definition" : "Edit definition") {
                                     definition = own(entry) ?? ""; everywhere = personal.documents[documentKey]?[Glossary.key(entry.abbreviation)] == nil && personal.general[Glossary.key(entry.abbreviation)] != nil
                                     editing = entry
                                 }
                                 Spacer()
-                                Link(UIStrings.text("Zoek online naar betekenis"), destination: entry.searchURL)
+                                Link(UIStrings.text("Look up meaning online"), destination: entry.searchURL)
                             }.font(.callout)
                         }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
                             .background(SPTheme.surface, in: RoundedRectangle(cornerRadius: 16))
                     }
                 }
             }
-            Text(UIStrings.text("‘Zoek online’ opent een aparte browserzoekopdracht voor de afkorting. Je PDF wordt niet meegestuurd.")).font(.caption).foregroundStyle(.secondary)
+            Text(UIStrings.text("‘Look up online’ opens a separate browser search for the abbreviation. Your PDF is not included.")).font(.caption).foregroundStyle(.secondary)
         }.padding(24).frame(width: 700, height: 650)
         .task(id: documentKey) {
             if !initialSearch.isEmpty { search = initialSearch }
@@ -105,8 +105,8 @@ struct GlossaryView: View {
                 loading = false
                 return
             }
-            do { online = try OnlineGlossaryStore.read(documentKey) } catch { self.error = UIStrings.text("Online aanvullingen konden niet worden geladen") + ": " + error.localizedDescription }
-            do { personal = try PersonalGlossary.read() } catch { self.error = UIStrings.text("Eigen woordenlijst kon niet worden geladen") + ": " + error.localizedDescription }
+            do { online = try OnlineGlossaryStore.read(documentKey) } catch { self.error = UIStrings.text("Cached glossary references could not be loaded") + ": " + error.localizedDescription }
+            do { personal = try PersonalGlossary.read() } catch { self.error = UIStrings.text("Personal glossary could not be loaded") + ": " + error.localizedDescription }
             let pages = document.pages
             let terms = Set(personal.general.keys).union(personal.documents[documentKey]?.keys.map { $0 } ?? [])
             entries = await Task.detached { Glossary.extract(pages: pages, personalTerms: terms) }.value
@@ -114,13 +114,13 @@ struct GlossaryView: View {
         }
         .sheet(item: $editing) { entry in
             VStack(alignment: .leading, spacing: 18) {
-                Text(UIStrings.text("Betekenis van \(entry.abbreviation)")).font(.title2.bold())
-                TextField(UIStrings.text("Eigen definitie"), text: $definition, axis: .vertical).lineLimit(3...6)
-                Toggle(UIStrings.text("Bewaren voor alle documenten"), isOn: $everywhere)
-                Text(UIStrings.text("Uitgeschakeld: alleen dit document. Een documentdefinitie heeft voorrang op je algemene woordenlijst.")).font(.caption).foregroundStyle(.secondary)
+                Text("Meaning of \(entry.abbreviation)").font(.title2.bold())
+                TextField(UIStrings.text("Personal definition"), text: $definition, axis: .vertical).lineLimit(3...6)
+                Toggle(UIStrings.text("Save for all documents"), isOn: $everywhere)
+                Text(UIStrings.text("Off: this document only. A document definition takes precedence over your general glossary.")).font(.caption).foregroundStyle(.secondary)
                 HStack {
-                    Button(UIStrings.text("Annuleren")) { editing = nil }.keyboardShortcut(.cancelAction)
-                    Button(UIStrings.text("Eigen definitie verwijderen"), role: .destructive) { save(entry, value: "") }
+                    Button(UIStrings.text("Cancel")) { editing = nil }.keyboardShortcut(.cancelAction)
+                    Button(UIStrings.text("Remove personal definition"), role: .destructive) { save(entry, value: "") }
                     Spacer()
                     Button(UIStrings.text("Bewaren")) { save(entry, value: definition) }
                         .disabled(definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -137,6 +137,6 @@ struct GlossaryView: View {
         var revised = personal
         revised.set(value, term: entry.abbreviation, document: documentKey, everywhere: everywhere)
         do { try revised.write(); personal = revised; editing = nil; error = nil }
-        catch { self.error = UIStrings.text("Bewaren mislukt") + ": " + error.localizedDescription; editing = nil }
+        catch { self.error = UIStrings.text("Could not save") + ": " + error.localizedDescription; editing = nil }
     }
 }

@@ -12,7 +12,7 @@ struct ProcessingSplashView: View {
             completed: completed,
             documentReady: workspace.processingDocumentReady || !workspace.busy,
             documentPresent: workspace.document != nil,
-            documentIssue: workspace.status.hasPrefix("Pdf inladen mislukt") ||
+            documentIssue: workspace.status.hasPrefix("PDF loading failed") ||
                 (workspace.processingMessage != nil && workspace.document == nil),
             pointsReady: workspace.analyzed && workspace.analysisState != .running,
             pointsIssue: [.needsProgram, .incomplete, .failed, .cancelled].contains(workspace.analysisState) || !workspace.citationWarning.isEmpty,
@@ -49,7 +49,7 @@ struct ProcessingSplashView: View {
                 VStack(spacing: 10) {
                     ProgressView(value: workspace.busy ? workspace.progress.fraction : 1)
                         .tint(.secondary)
-                        .accessibilityLabel(UIStrings.text("Voortgang") + ": " + UIStrings.text(presentation.primaryStatus))
+                        .accessibilityLabel(UIStrings.text("Progress") + ": " + UIStrings.text(presentation.primaryStatus))
                         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: workspace.progress.fraction)
                         .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: completed)
                     HStack {
@@ -64,30 +64,30 @@ struct ProcessingSplashView: View {
                     Text(UIStrings.text(count)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
                 }
                 HStack(spacing: 12) {
-                    Button(UIStrings.text(workspace.processingDocumentReady ? "Stop en terug naar importeren" : "Annuleer import")) { onReturnToImport() }
+                    Button(workspace.processingDocumentReady ? "Stop and return to import" : "Cancel import") { onReturnToImport() }
                         .buttonStyle(FocusSecondaryButtonStyle())
                     if workspace.canSwitchChatGPTModel {
-                        Button(UIStrings.text("Wissel AI-model…")) { workspace.presentChatGPTModelSwitch() }
+                        Button("Switch AI model…") { workspace.presentChatGPTModelSwitch() }
                             .buttonStyle(FocusSecondaryButtonStyle())
                     }
                     if workspace.processingDocumentReady {
-                    Button(UIStrings.text("Open document en resultaten")) { workspace.showInterimResults() }
+                    Button(UIStrings.text("Open document and results")) { workspace.showInterimResults() }
                         .buttonStyle(FocusPrimaryButtonStyle())
                     }
                 }.controlSize(.large)
             } else if completed {
                 // Reserve the action's space so completion does not move the illustration.
-                Button(UIStrings.text("Stop analyse")) {}.controlSize(.large).hidden().accessibilityHidden(true)
+                Button(UIStrings.text("Stop analysis")) {}.controlSize(.large).hidden().accessibilityHidden(true)
             } else if let message = workspace.processingMessage {
                 ScrollView {
                     Text(message.components(separatedBy: "\n").map { UIStrings.text($0) }.joined(separator: "\n")).font(.callout).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
                 }.frame(maxHeight: 140)
                 HStack(spacing: 12) {
-                    Button(UIStrings.text("Terug naar importeren")) { onReturnToImport() }
+                    Button(UIStrings.text("Return to import")) { onReturnToImport() }
                         .buttonStyle(FocusSecondaryButtonStyle())
                     if !workspace.showsWelcome && workspace.document != nil {
-                        Button(UIStrings.text("Open document en resultaten")) { workspace.showProcessedResults() }
+                        Button(UIStrings.text("Open document and results")) { workspace.showProcessedResults() }
                             .buttonStyle(FocusPrimaryButtonStyle())
                     }
                 }.controlSize(.large)
@@ -121,26 +121,26 @@ struct ProcessingSplashView: View {
         let symbol: String
         let label: String
         switch state {
-        case .ready: symbol = "checkmark.circle.fill"; label = "Gereed"
-        case .active: symbol = "circle.dashed"; label = "Bezig"
-        case .issue: symbol = "exclamationmark.circle.fill"; label = "Aandacht"
-        case .pending: symbol = "circle"; label = "Wacht"
+        case .ready: symbol = "checkmark.circle.fill"; label = "Ready"
+        case .active: symbol = "circle.dashed"; label = "In progress"
+        case .issue: symbol = "exclamationmark.circle.fill"; label = "Needs attention"
+        case .pending: symbol = "circle"; label = "Waiting"
         }
         return VStack(spacing: 2) {
-            Label(UIStrings.text(stage.rawValue), systemImage: symbol)
+            Label(stage.rawValue, systemImage: symbol)
                 .labelStyle(.titleAndIcon)
                 .foregroundStyle(state == .issue ? Color.orange : state == .active ? Color.primary : Color.secondary)
                 .lineLimit(1).minimumScaleFactor(0.8)
-            Text(UIStrings.text(label)).foregroundStyle(.secondary)
+            Text(label).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .accessibilityLabel(UIStrings.text(stage.rawValue) + ": " + UIStrings.text(label))
+        .accessibilityLabel(stage.rawValue + ": " + label)
     }
 
     private var progressCount: String? {
         guard workspace.progress.phaseTotal > 0 else { return nil }
-        let unit = workspace.progress.isMergingSummary ? "samenvoegingen" : "stappen"
-        return "\(workspace.progress.phaseCompleted) van \(workspace.progress.phaseTotal) \(unit) gereed"
+        let unit = workspace.progress.isMergingSummary ? "merge steps" : "steps"
+        return "\(workspace.progress.phaseCompleted) of \(workspace.progress.phaseTotal) \(unit) complete"
     }
 
     private var details: some View {
@@ -151,12 +151,12 @@ struct ProcessingSplashView: View {
                         Text(UIStrings.text(AIConfiguration.label(workspace.activeModel)))
                     }
                     if workspace.importCommitteeReviewActive {
-                        Text(UIStrings.text("Commissievoorbereiding") + " · " + UIStrings.text(workspace.meetingPurpose.title))
+                        Text("Profile review · " + workspace.meetingPurpose.title)
                     }
                     if let phase = workspace.analysisPhase {
-                        Text(UIStrings.text("Huidige AI-fase: \(phase.title)"))
+                        Text("Current AI stage: \(phase.title)")
                     }
-                    Text(UIStrings.text("Verstreken \(elapsed(now: context.date)) · \(requestStatus)"))
+                    Text("Elapsed \(elapsed(now: context.date)) · \(requestStatus)")
                     Text(UIStrings.text(workspace.status)).textSelection(.enabled)
                 }
                 .font(.caption).foregroundStyle(.secondary)
@@ -173,9 +173,9 @@ struct ProcessingSplashView: View {
 
     private var requestStatus: String {
         let progress = workspace.progress
-        guard workspace.busy else { return completed ? "Verwerking afgerond" : "Verwerking vraagt aandacht" }
+        guard workspace.busy else { return completed ? "Processing complete" : "Processing needs attention" }
         return progress.phaseTotal > 0 && progress.phaseCompleted >= progress.phaseTotal
-            ? "Aanvraagfase afronden" : "Wachten op of verwerken van aanvraag"
+            ? "Finishing request" : "Waiting for or processing request"
     }
 }
 

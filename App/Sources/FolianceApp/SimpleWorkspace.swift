@@ -4,6 +4,14 @@ import PDFKit
 import UniformTypeIdentifiers
 import FolianceCore
 
+private func englishPageScopeLabel(_ selected: [Int], count: Int) -> String {
+    let fullDocument = Array(1...max(1, count))
+    if selected == fullDocument {
+        return "Entire document (\(count) \(count == 1 ? "page" : "pages"))"
+    }
+    return "PDF pages " + selected.map(String.init).joined(separator: ", ")
+}
+
 struct OpenPDF: Sendable {
     let name: String
     let data: Data
@@ -18,17 +26,17 @@ struct OpenPDF: Sendable {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size <= 100_000_000 else { throw AppError(message: "Deze pdf is groter dan 100 MB. Gebruik een kleiner bestand.") }
+        guard size <= 100_000_000 else { throw AppError(message: "This PDF exceeds 100 MB. Use a smaller file.") }
         let data = try Data(contentsOf: url)
         guard let pdf = PDFDocument(data: data), !pdf.isLocked else {
-            throw AppError(message: "Deze pdf is niet leesbaar of is vergrendeld.")
+            throw AppError(message: "This PDF is unreadable or locked.")
         }
         let sourceFingerprint = LayoutStore.fingerprint(data)
         let overrides = try LayoutStore.read(fingerprint: sourceFingerprint)
         let extracted = try PageLayout.extract(pdf: pdf, overrides: overrides, includeTables: true,
                                                progress: progress, sourceFingerprint: sourceFingerprint)
         guard extracted.hasTextLayer || !extracted.tables.isEmpty else {
-            throw AppError(message: "Deze PDF heeft geen leesbare tekstlaag. Maak eerst een doorzoekbare PDF met OCR (tekstherkenning) en importeer die opnieuw.")
+            throw AppError(message: "This PDF has no readable text layer. Create a searchable PDF with OCR (text recognition) first, then import it again.")
         }
         return OpenPDF(name: url.lastPathComponent, data: data, pages: extracted.pages, findings: [],
                        readings: extracted.readings, extractedTables: extracted.tables,
@@ -184,11 +192,11 @@ final class SimpleWorkspace: ObservableObject {
     func autosaveOpenedWorkdocument() async throws {
         guard let url = openedWorkdocumentURL, document != nil, hasUnsavedChanges else { return }
         guard canStartAnalysis, tableAnalysisID == nil, !exporting else {
-            throw AppError(message: "De wijzigingen in \(url.lastPathComponent) kunnen niet automatisch worden bewaard omdat verwerking nog bezig is.")
+            throw AppError(message: "Changes to \(url.lastPathComponent) cannot be saved automatically while processing is underway.")
         }
         terminationAutosaveInProgress = true
         exporting = true
-        status = "Werkdocument automatisch bewaren…"
+        status = "Saving work document automatically…"
         defer { terminationAutosaveInProgress = false; exporting = false }
         while hasUnsavedChanges {
             try Task.checkCancellation()
@@ -200,16 +208,16 @@ final class SimpleWorkspace: ObservableObject {
             let writer = workspaceArchiveWriter
             try await Task.detached(priority: .utility) { try writer(snapshot, url) }.value
             guard documentID == capturedDocumentID, openedWorkdocumentURL == url else {
-                throw AppError(message: "Het actieve werkdocument is tijdens automatisch bewaren vervangen. De eerdere momentopname is veilig weggeschreven; sluit de app opnieuw om het nieuwe document te bewaren.")
+                throw AppError(message: "The active work document was replaced during automatic saving. The earlier snapshot was saved safely; close and reopen the app to save the new document.")
             }
             markSaved(capturedRevision)
             if hasUnsavedChanges {
                 guard !busy, !committeeReviewBusy, !isSwitchingChatGPTModel, tableAnalysisID == nil else {
-                    throw AppError(message: "Het werkdocument \(url.lastPathComponent) is gewijzigd tijdens automatisch bewaren. Sluit de app opnieuw zodra de verwerking klaar is.")
+                    throw AppError(message: "The work document \(url.lastPathComponent) changed during automatic saving. Close and reopen the app after processing finishes.")
                 }
             }
         }
-        status = "Werkdocument automatisch bewaard: " + url.lastPathComponent
+        status = "Work document saved automatically: " + url.lastPathComponent
         recordRecentWorkspace(url)
     }
 
@@ -255,7 +263,7 @@ final class SimpleWorkspace: ObservableObject {
         committeeReviewError = nil
         committeeReviewCompleted = 0
         committeeReviewTotal = 0
-        committeeReviewStatus = "Voorbereiding voor \(purpose.title)…"
+        committeeReviewStatus = "Preparing \(purpose.title.lowercased()) review…"
         defer {
             if committeeReviewTaskID == runID {
                 committeeReviewTaskID = nil
@@ -273,7 +281,7 @@ final class SimpleWorkspace: ObservableObject {
             }.value
             guard !Task.isCancelled, documentID == expectedDocumentID else { return false }
             guard committeeReviewGeneration == generation else {
-                committeeReviewStatus = "Profielbeoordeling gestopt; basisanalyse start."
+                committeeReviewStatus = "Profile review stopped; starting the overview analysis."
                 return true
             }
             if let existing = committeeReviewHistory.values.first(where: {
@@ -284,7 +292,7 @@ final class SimpleWorkspace: ObservableObject {
                 }.value
                 guard !Task.isCancelled, documentID == expectedDocumentID else { return false }
                 guard committeeReviewGeneration == generation else {
-                    committeeReviewStatus = "Profielbeoordeling gestopt; basisanalyse start."
+                    committeeReviewStatus = "Profile review stopped; starting the overview analysis."
                     return true
                 }
                 if cachedIsValid {
@@ -292,7 +300,7 @@ final class SimpleWorkspace: ObservableObject {
                     committeeReviewCompleted = existing.entries.count
                     committeeReviewTotal = existing.entries.count
                     progress.update(completed: existing.entries.count, total: existing.entries.count)
-                    committeeReviewStatus = "Bewaarde profielbeoordeling hergebruikt."
+                    committeeReviewStatus = "Reusing the saved profile review."
                     return true
                 }
             }
@@ -309,7 +317,7 @@ final class SimpleWorkspace: ObservableObject {
                             self.committeeReviewCompleted = completed
                             self.committeeReviewTotal = total
                             self.progress.update(completed: completed, total: total)
-                            self.committeeReviewStatus = snapshot.complete ? "Profielbeoordeling afgerond." : "Voorbereiding voor \(purpose.title)…"
+                            self.committeeReviewStatus = snapshot.complete ? "Profile review complete." : "Preparing \(purpose.title.lowercased()) review…"
                             self.markDirty()
                         }
                     }
@@ -331,37 +339,37 @@ final class SimpleWorkspace: ObservableObject {
                   reviewIsValid else {
                 guard !Task.isCancelled, documentID == expectedDocumentID else { return false }
                 if committeeReviewGeneration != generation {
-                    committeeReviewStatus = "Profielbeoordeling gestopt; basisanalyse start."
+                    committeeReviewStatus = "Profile review stopped; starting the overview analysis."
                     return true
                 }
-                committeeReviewError = "De profielbeoordeling kon niet veilig aan de bronpassages worden gekoppeld."
-                committeeReviewStatus = "Profielbeoordeling niet bevestigd; basisanalyse start."
+                committeeReviewError = "The profile review could not be safely matched to the source passages."
+                committeeReviewStatus = "Profile review could not be verified; starting the overview analysis."
                 return true
             }
             committeeReviewHistory[Self.committeeReviewKey(review)] = review
             committeeReviews[purpose.rawValue] = review
             committeeReviewCompleted = review.entries.filter { $0.rating != .unassessed }.count
             committeeReviewTotal = review.entries.count
-            committeeReviewStatus = review.complete ? "Profielbeoordeling gereed; basisanalyse start." : "Profielbeoordeling gedeeltelijk gereed; basisanalyse start."
+            committeeReviewStatus = review.complete ? "Profile review ready; starting the overview analysis." : "Profile review partially ready; starting the overview analysis."
             markDirty()
             return true
         } catch {
             guard committeeReviewTaskID == runID else { return false }
             if committeeReviewGeneration == generation && !Task.isCancelled {
                 committeeReviewError = error.localizedDescription
-                committeeReviewStatus = "Profielbeoordeling mislukt; basisanalyse start."
+                committeeReviewStatus = "Profile review failed; starting the overview analysis."
                 if let providerError = error as? ChatGPTError {
                     switch providerError {
                     case .quotaExceeded, .planUsageLimit, .usageLimit:
                         chatGPTFailed = true
                         self.error = error.localizedDescription
-                        committeeReviewStatus = "Profielbeoordeling gestopt door de AI-gebruiksgrens."
+                        committeeReviewStatus = "Profile review stopped at the AI usage limit."
                         return true
                     default: break
                     }
                 }
             } else {
-                committeeReviewStatus = "Profielbeoordeling gestopt; basisanalyse start."
+                committeeReviewStatus = "Profile review stopped; starting the overview analysis."
             }
             return !Task.isCancelled
         }
@@ -407,14 +415,14 @@ final class SimpleWorkspace: ObservableObject {
     func startCommitteeReview(model requestedModel: String? = nil) {
         guard !importTaskActive else { return }
         guard meetingPurpose != .raad else {
-            committeeReviewStatus = "Overzicht gebruikt de algemene documentanalyse."
+            committeeReviewStatus = "Overview uses the base document analysis."
             committeeReviewError = nil
             return
         }
         let model = requestedModel ?? AIConfiguration.selectedModel
         guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            committeeReviewError = "Kies eerst een AI-model voor de profielbeoordeling."
-            committeeReviewStatus = "Profielbeoordeling niet gestart."
+            committeeReviewError = "Choose an AI model before starting a profile review."
+            committeeReviewStatus = "Profile review did not start."
             return
         }
         if committeeReviewBusy {
@@ -441,7 +449,7 @@ final class SimpleWorkspace: ObservableObject {
         committeeReviewRunningPurpose = purpose
         committeeReviewRunningModel = model
         committeeReviewBusy = true
-        committeeReviewStatus = shouldResume ? "Ontbrekende profielbeoordelingen herstellen…" : "Leesprofiel beoordelen…"
+        committeeReviewStatus = shouldResume ? "Resuming the incomplete profile review…" : "Reviewing the selected profile…"
         committeeReviewError = nil
         committeeReviewCompleted = shouldResume ? previousReview?.entries.filter { $0.rating != .unassessed }.count ?? 0 : 0
         committeeReviewTotal = shouldResume ? previousReview?.entries.count ?? 0 : 0
@@ -460,7 +468,7 @@ final class SimpleWorkspace: ObservableObject {
                     self.committeeReviewRunningPurpose = nil
                     self.committeeReviewRunningModel = nil
                     if self.committeeReviewGeneration == generation && Task.isCancelled {
-                        self.committeeReviewStatus = "Profielbeoordeling gestopt."
+                        self.committeeReviewStatus = "Profile review stopped."
                     }
                     if self.queuedCommitteeReview == nil,
                        self.committeeReviewGeneration == generation, !Task.isCancelled,
@@ -492,7 +500,7 @@ final class SimpleWorkspace: ObservableObject {
                     self.committeeReviewError = nil
                     self.committeeReviewCompleted = existing.entries.count
                     self.committeeReviewTotal = existing.entries.count
-                    self.committeeReviewStatus = "Profielbeoordeling al beschikbaar."
+                    self.committeeReviewStatus = "Profile review is already available."
                     return
                 }
                 let update: CommitteeProgressUpdate = { snapshot, completed, total in
@@ -505,8 +513,8 @@ final class SimpleWorkspace: ObservableObject {
                         self.committeeReviews[purpose.rawValue] = snapshot
                         self.committeeReviewCompleted = completed
                         self.committeeReviewTotal = total
-                        self.committeeReviewStatus = snapshot.complete ? "Profielbeoordeling afgerond." :
-                            shouldResume ? "Ontbrekende profielbeoordelingen herstellen…" : "Profielbeoordeling bezig…"
+                        self.committeeReviewStatus = snapshot.complete ? "Profile review complete." :
+                            shouldResume ? "Resuming incomplete profile review…" : "Profile review in progress…"
                         self.markDirty()
                     }
                 }
@@ -532,7 +540,7 @@ final class SimpleWorkspace: ObservableObject {
                 self.committeeReviews[purpose.rawValue] = review
                 self.committeeReviewCompleted = review.entries.filter { $0.rating != .unassessed }.count
                 self.committeeReviewTotal = review.entries.count
-                self.committeeReviewStatus = review.complete ? "Profielbeoordeling afgerond." : "Profielbeoordeling gedeeltelijk afgerond."
+                self.committeeReviewStatus = review.complete ? "Profile review complete." : "Profile review partially complete."
                 measurementOutcome = review.complete ? "completed" : "incomplete"
                 self.markDirty()
                 if shouldResume, review.complete {
@@ -543,9 +551,9 @@ final class SimpleWorkspace: ObservableObject {
                 guard self.committeeReviewTaskID == runID else { return }
                 if self.committeeReviewGeneration == generation && !Task.isCancelled {
                     self.committeeReviewError = error.localizedDescription
-                    self.committeeReviewStatus = "Profielbeoordeling mislukt."
+                    self.committeeReviewStatus = "Profile review failed."
                 } else if self.committeeReviewGeneration != generation {
-                    self.committeeReviewStatus = "Profielbeoordeling gestopt."
+                    self.committeeReviewStatus = "Profile review stopped."
                 }
             }
         }
@@ -584,7 +592,7 @@ final class SimpleWorkspace: ObservableObject {
         committeeReviewRunningPurpose = purpose; committeeReviewRunningModel = model
         committeeReviewBusy = true; committeeReviewError = nil
         committeeReviewCompleted = 0; committeeReviewTotal = original.entries.count
-        committeeReviewStatus = "Onderwerpen indelen…"
+        committeeReviewStatus = "Categorizing findings…"
         let ownsMeasurement = analysisMeasurement == nil
         let measurement = analysisMeasurement ?? AnalysisMetrics.Recorder(model: model, operation: "committee-categorization")
         let generator = missingOnly ? generateMissingCommitteeCategories : generateCommitteeCategories
@@ -622,16 +630,16 @@ final class SimpleWorkspace: ObservableObject {
                 try Task.checkCancellation()
                 let merged = await Task.detached(priority: .userInitiated) { CommitteeMetadataMerge.applying(result, to: original) }.value
                 guard self.documentID == expectedDocumentID, self.committeeReviewGeneration == generation else { return }
-                guard let merged else { throw AppError(message: "De onderwerpindeling past niet bij de bewaarde bronpassages.") }
+                guard let merged else { throw AppError(message: "The finding categories do not match the saved source passages.") }
                 self.committeeReviews[purpose.rawValue] = merged
                 self.committeeReviewHistory[Self.committeeReviewKey(merged)] = merged
-                self.committeeReviewStatus = "Onderwerpen ingedeeld; onzekere passages blijven onder Nog in te delen."
+                self.committeeReviewStatus = "Findings categorized; uncertain passages remain under Unassigned."
                 self.markDirty()
             } catch {
                 measurementOutcome = Task.isCancelled ? "cancelled" : "incomplete"
                 guard self.documentID == expectedDocumentID, self.committeeReviewTaskID == runID else { return }
                 if !Task.isCancelled && self.committeeReviewGeneration == generation { self.committeeReviewError = error.localizedDescription }
-                self.committeeReviewStatus = "Onderwerpindeling gestopt; bestaande beoordelingen behouden."
+                self.committeeReviewStatus = "Categorization stopped; existing assessments are preserved."
             }
         }
     }
@@ -639,7 +647,7 @@ final class SimpleWorkspace: ObservableObject {
         guard committeeReviewBusy else { return }
         queuedCommitteeReview = nil
         committeeReviewGeneration = UUID()
-        committeeReviewStatus = "Profielbeoordeling annuleren…"
+        committeeReviewStatus = "Canceling profile review…"
         committeeReviewError = nil
         if importCommitteeReviewActive {
             importCommitteeReviewTask?.cancel()
@@ -721,7 +729,7 @@ final class SimpleWorkspace: ObservableObject {
             for key in keys where selectionMetadata.statuses[key] == nil { selectionMetadata.statuses[key] = .discuss }
         }
         do { try SavedSelection.write(starred, documentKey: selectionDocumentKey) }
-        catch { self.error = "Selectie kon niet worden bewaard: " + error.localizedDescription }
+        catch { self.error = "Selection could not be saved: " + error.localizedDescription }
         persistSelectionMetadata()
         markDirty()
     }
@@ -767,30 +775,30 @@ final class SimpleWorkspace: ObservableObject {
     var completionDetails: String {
         let committeeDetail: String? = {
             guard meetingPurpose != .raad, !committeeReviewBusy else { return nil }
-            if let committeeReviewError { return "Profielbeoordeling: " + committeeReviewError }
+            if let committeeReviewError { return "Profile review: " + committeeReviewError }
             guard committeeReviews[meetingPurpose.rawValue]?.complete == true else {
-                return "Profielbeoordeling niet afgerond; bekijk de beschikbare passages bij Punten."
+                return "Profile review is incomplete; see the available passages in Findings."
             }
             return nil
         }()
-        return [layoutNotice.isEmpty ? nil : layoutNotice, analysisState == .needsProgram ? analysisState.rawValue : nil, summaryError, analysisIssues.isEmpty ? nil : analysisIssues, citationWarning.isEmpty ? nil : citationWarning,
+        return [layoutNotice.isEmpty ? nil : layoutNotice, analysisState == .needsProgram ? analysisState.englishTitle : nil, summaryError, analysisIssues.isEmpty ? nil : analysisIssues, citationWarning.isEmpty ? nil : citationWarning,
          committeeDetail,
          keyPointIssues.isEmpty ? nil : keyPointIssues].compactMap { $0 }.joined(separator: "\n\n")
     }
     var completionTitle: String {
         if exporting { return status }
         if busy { return status }
-        if baseAnalysisIncomplete { return "Analyse nog niet afgerond" }
-        if committeeNeedsAttention { return "Profielbeoordeling nog niet afgerond" }
-        if !completionDetails.isEmpty { return "Analyse afgerond · broncontrole nodig" }
-        if analyzed || keyPointsReady { return "Verwerking afgerond" }
+        if baseAnalysisIncomplete { return "Analysis is incomplete" }
+        if committeeNeedsAttention { return "Profile review is incomplete" }
+        if !completionDetails.isEmpty { return "Analysis complete · source review needed" }
+        if analyzed || keyPointsReady { return "Processing complete" }
         return status
     }
     private var chatGPTFailed = false
     @Published var requestedSelection = ""
     @Published var activeModel = ""
-    @Published var activeScope = "Hele document"
-    @Published var highlightScope = "Hele document"
+    @Published var activeScope = "Entire document"
+    @Published var highlightScope = "Entire document"
     @Published var summaryPages: [Int] = []
     @Published var annotations: [String: PointAnnotation] = [:] { didSet { analysisRecordsCache = nil } }
     private var summaryInputKey: String?
@@ -835,7 +843,7 @@ final class SimpleWorkspace: ObservableObject {
         do { selectedPages = try PageScope.parse(oldJob.selection, count: document.pages.count) }
         catch { return }
         let pages = PageScope.mask(document.pages, selected: selectedPages)
-        let scope = PageScope.label(selectedPages, count: document.pages.count)
+        let scope = englishPageScopeLabel(selectedPages, count: document.pages.count)
         let wasPresented = processingPresented
         let previous = task
         guard let previous else { return }
@@ -843,7 +851,7 @@ final class SimpleWorkspace: ObservableObject {
 
         showsChatGPTModelSwitch = false
         isSwitchingChatGPTModel = true
-        status = "Wisselen van ChatGPT-model…"
+        status = "Switching ChatGPT model…"
         let switchTask = Task { [weak self] in
             guard let self else { return }
             await ChatGPTModelSwitchDrain.cancelDrainAndRestart(previous, isCurrent: {
@@ -871,7 +879,7 @@ final class SimpleWorkspace: ObservableObject {
                 if later.contains(.summary) {
                     self.summaryRetry = (pages, nextModel)
                     self.summaryPages = selectedPages
-                    self.summaryScope = scope
+                self.summaryScope = scope
                 }
                 if later.contains(.highlights) {
                     self.highlightsRetry = (pages, nextModel, scope)
@@ -915,7 +923,7 @@ final class SimpleWorkspace: ObservableObject {
             if self.chatGPTModelSwitchToken == expectedRunToken {
                 self.isSwitchingChatGPTModel = false
                 if self.documentID != expectedDocumentID || Task.isCancelled {
-                    self.status = "Modelwissel gestopt; de actieve resultaten zijn behouden."
+                    self.status = "Model switch stopped; current results are preserved."
                 }
             }
         }
@@ -978,7 +986,7 @@ final class SimpleWorkspace: ObservableObject {
             }
             if needsSummary && !Task.isCancelled && !chatGPTFailed {
                 analysisPhase = .summary; summaryPages = summaryPageNumbersForRetry
-                summaryScope = PageScope.label(summaryPages, count: document.pages.count)
+                summaryScope = englishPageScopeLabel(summaryPages, count: document.pages.count)
                 await makeSummary(pages: PageScope.mask(document.pages, selected: summaryPageNumbersForRetry), model: summaryModelForRetry)
             }
             if needsHighlights && !Task.isCancelled && !chatGPTFailed {
@@ -1037,7 +1045,7 @@ final class SimpleWorkspace: ObservableObject {
                         self.keyPoints = points
                         self.highlightModel = model
                     }
-                    self.status = "Kernpunten beoordelen: \(current) van \(total)…\(AIConfiguration.phaseModelLabel(model, role: .worker))"
+                    self.status = "Reviewing key passages: \(current) of \(total)…\(AIConfiguration.phaseModelLabel(model, role: .worker))"
                 }
             }
             try Task.checkCancellation()
@@ -1051,11 +1059,11 @@ final class SimpleWorkspace: ObservableObject {
                (documentID != phaseDocumentID || chatGPTModelSwitchToken != phaseSwitchToken) { return }
             if error is ChatGPTError { chatGPTFailed = true }
             if !Task.isCancelled { self.error = error.localizedDescription }
-            keyPointIssues = Task.isCancelled ? "Kernselectie gestopt; de selectie is onvolledig." : error.localizedDescription }
+            keyPointIssues = Task.isCancelled ? "Key passage review stopped; results are incomplete." : error.localizedDescription }
     }
     func retryHighlights(model: String = AIConfiguration.selectedModel) {
         guard canStartAnalysis, let document else { return }
-        let saved = highlightsRetry ?? (document.pages, model, "Hele document")
+        let saved = highlightsRetry ?? (document.pages, model, "Entire document")
         error = nil; chatGPTFailed = false
         canSwitchCurrentAnalysisWorkflow = false
         busy = true; progress.begin(phases: 1, chatGPT: AIConfiguration.isChatGPT(saved.1))
@@ -1082,7 +1090,7 @@ final class SimpleWorkspace: ObservableObject {
     @Published var documentID = UUID() {
         didSet { committeePresentationCache.clear() }
     }
-    @Published var summaryScope = "Hele document"
+    @Published var summaryScope = "Entire document"
     @Published var focus = UserDefaults.standard.string(forKey: "savedProgramFocus") ?? UserDefaults.standard.string(forKey: "committeeContext") ?? ""
     @Published var programName = ""
     @Published var programIdentity = ""
@@ -1126,7 +1134,7 @@ final class SimpleWorkspace: ObservableObject {
     @Published var processingName = ""
     @Published var processingMessage: String?
     @Published var busy = false
-    @Published var status = "Kies een pdf om te beginnen."
+    @Published var status = "Choose a PDF to begin."
     @Published var error: String?
     @Published var analysisState = AnalysisState.notStarted
     @Published var neutralAnalysis = false
@@ -1144,7 +1152,7 @@ final class SimpleWorkspace: ObservableObject {
         resumeMissing()
     }
     @Published var analysisContext = ""
-    @Published var analysisScope = "Hele document"
+    @Published var analysisScope = "Entire document"
     private var localFocus = ""
     @Published var page = 1
     @Published var navigationID = UUID()
@@ -1189,7 +1197,7 @@ final class SimpleWorkspace: ObservableObject {
 
     func cancelExport() {
         guard canCancelExport else { return }
-        status = "PDF-export annuleren…"
+        status = "Canceling PDF export…"
         exportTask?.cancel()
     }
 
@@ -1252,7 +1260,7 @@ final class SimpleWorkspace: ObservableObject {
             processingPresented = false
             processingMessage = nil
             showsWelcome = false
-            status = "Pdf inladen geannuleerd; huidig document behouden."
+            status = "PDF loading canceled; the current document was kept."
             return
         }
         task?.cancel(); progress.resetChatGPTEstimateForCancellation(); tableAnalysisTask?.cancel(); tableAnalysisID = nil; tableAnalysisError = nil
@@ -1278,7 +1286,7 @@ final class SimpleWorkspace: ObservableObject {
         summaryInputKey = nil; highlightsInputKey = nil; analysisInputKey = nil; analysisCompletedPages = nil; annotations = [:]
         analysisState = .cancelled
         analysisModel = nil
-        status = "Kies een pdf om te beginnen."
+        status = "Choose a PDF to begin."
         documentID = UUID()
         documentChat.reset(); pageChat.reset()
     }
@@ -1287,14 +1295,14 @@ final class SimpleWorkspace: ObservableObject {
         guard canStartAnalysis else { return }
         // Keep the current result available until a replacement PDF is successfully imported.
         showsWelcome = true
-        status = "Kies een pdf om te beginnen."
+        status = "Choose a PDF to begin."
     }
 
     @discardableResult func load(_ urls: [URL], themes: [Theme] = [], focus: String = "", model: String? = nil, compareProgram: Bool = true,
                                  meetingPurpose importPurpose: MeetingPurpose = .raad) -> Task<Void, Never>? {
         guard canStartBaseAnalysis else { return nil }
         guard urls.count == 1, let url = urls.first, url.isFileURL, url.pathExtension.lowercased() == "pdf" else {
-            error = "Kies of sleep één pdf-bestand tegelijk."; return nil
+            error = "Choose or drop one PDF file at a time."; return nil
         }
         if committeeReviewBusy { stopCommitteeReview() }
         let previousCommitteeReview = committeeReviewTask
@@ -1305,7 +1313,7 @@ final class SimpleWorkspace: ObservableObject {
         canSwitchCurrentAnalysisWorkflow = model.map(AIConfiguration.isChatGPT) ?? false
         chatGPTFailed = false
         let hasImportCommitteePhase = model != nil && importPurpose != .raad
-        busy = true; progress.begin(phases: model == nil ? 1 : (hasImportCommitteePhase ? 5 : 4), chatGPT: model.map(AIConfiguration.isChatGPT) ?? false); progress.next(); status = "Pdf inladen…"; error = nil
+        busy = true; progress.begin(phases: model == nil ? 1 : (hasImportCommitteePhase ? 5 : 4), chatGPT: model.map(AIConfiguration.isChatGPT) ?? false); progress.next(); status = "Loading PDF…"; error = nil
         processingDocumentReady = false
         let progressID = UUID()
         importProgressID = progressID
@@ -1328,7 +1336,7 @@ final class SimpleWorkspace: ObservableObject {
                         Task { @MainActor in
                             guard self.importProgressID == progressID else { return }
                             self.progress.update(completed: completed, total: total)
-                            self.status = "Pdf lezen: pagina \(completed) van \(total)…"
+                            self.status = "Reading PDF: page \(completed) of \(total)…"
                         }
                     }
                 }
@@ -1361,13 +1369,13 @@ final class SimpleWorkspace: ObservableObject {
                 markDirty()
                 annotations = SavedWork.read([String: PointAnnotation].self, key: "annotations-" + selectionDocumentKey) ?? [:]
                 summaryInputKey = nil; highlightsInputKey = nil; analysisInputKey = nil; analysisCompletedPages = nil; highlightsRetry = nil; highlightModel = nil; lastJob = nil
-                summaryPages = Array(1...loaded.pages.count); highlightScope = "Hele document"
+                summaryPages = Array(1...loaded.pages.count); highlightScope = "Entire document"
                 requestedSelection = ""
-                activeModel = model ?? ""; activeScope = "Hele document"
+                activeModel = model ?? ""; activeScope = "Entire document"
                 analysisIssues = ""; retryParameters = nil
                 analysisState = .notStarted; neutralAnalysis = false
                 analysisModel = nil
-                documentSummary = nil; summaryError = nil; summaryRetry = nil; summaryModel = nil; summaryScope = "Hele document"
+                documentSummary = nil; summaryError = nil; summaryRetry = nil; summaryModel = nil; summaryScope = "Entire document"
                 tableAnalysisTask?.cancel(); tableAnalysisID = nil; tableAnalysisError = nil
                 documentID = UUID(); documentChat.reset(); pageChat.reset()
                 self.focus = UserDefaults.standard.string(forKey: "savedProgramFocus") ?? UserDefaults.standard.string(forKey: "committeeContext") ?? ""
@@ -1375,29 +1383,29 @@ final class SimpleWorkspace: ObservableObject {
                 document = loaded; citationWarning = ""; insights = []; analyzed = false; page = 1; navigationID = UUID()
                 terminationReadingPage = 1; terminationViewState = nil
                 let empty = loaded.pages.filter { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
-                status = "\(loaded.pages.count) pagina’s" + (empty > 0 ? " · \(empty) pagina’s zonder leesbare tekst" : "")
+                status = "\(loaded.pages.count) pages" + (empty > 0 ? " · \(empty) pages with no readable text" : "")
                 showsWelcome = false; localFocus = self.focus
                 processingDocumentReady = true
                 if let model, importPurpose != .raad {
                     progress.next()
-                    status = "Voorbereiding voor \(importPurpose.title)…"
+                    status = "Preparing \(importPurpose.title.lowercased()) review…"
                     let importedDocumentID = documentID
                     let reviewCanContinue = await runImportCommitteeReview(pages: loaded.pages, purpose: importPurpose, model: model, expectedDocumentID: importedDocumentID)
                     guard reviewCanContinue, !Task.isCancelled, documentID == importedDocumentID else { return }
                 }
                 if let model {
-                    activeModel = model; activeScope = "Hele document"
+                    activeModel = model; activeScope = "Entire document"
                     lastJob = WorkspaceJob(model: model, context: self.focus, selection: "", compare: compareProgram, targeted: false)
                     if !Task.isCancelled && !chatGPTFailed {
                         analysisPhase = .points
                         await runAnalysis(document: loaded, model: model, context: self.focus, selection: "", compareProgram: compareProgram)
                         if !Task.isCancelled && !chatGPTFailed { analysisPhase = .summary; await makeSummary(pages: loaded.pages, model: model) }
-                        if !Task.isCancelled && !chatGPTFailed { await makeHighlights(pages: loaded.pages, model: model, scope: "Hele document") }
+                        if !Task.isCancelled && !chatGPTFailed { await makeHighlights(pages: loaded.pages, model: model, scope: "Entire document") }
                     }
                 }
 
             } catch {
-                if !Task.isCancelled { self.error = error.localizedDescription; status = "Pdf inladen mislukt." }
+                if !Task.isCancelled { self.error = error.localizedDescription; status = "PDF loading failed." }
             }
             analysisPhase = nil
             canSwitchCurrentAnalysisWorkflow = false
@@ -1414,9 +1422,9 @@ final class SimpleWorkspace: ObservableObject {
             selected = try PageScope.parse(selection, count: document.pages.count)
             selectedPages = PageScope.mask(document.pages, selected: selected)
             guard selectedPages.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
-                throw AppError(message: "De gekozen pagina’s bevatten geen leesbare tekst.")
+                throw AppError(message: "The selected pages contain no readable text.")
             }
-            scope = PageScope.label(selected, count: document.pages.count)
+            scope = englishPageScopeLabel(selected, count: document.pages.count)
         } catch {
             self.error = error.localizedDescription
             return
@@ -1430,7 +1438,7 @@ final class SimpleWorkspace: ObservableObject {
         let needsAnalysis = !resumeOnly || analysisInputKey != analysisKey
         let needsHighlights = !resumeOnly || highlightsInputKey != inputKey
         let phases = [needsSummary, needsAnalysis, needsHighlights].filter { $0 }.count
-        guard phases > 0 else { status = "Alle onderdelen zijn al gereed."; return }
+        guard phases > 0 else { status = "All stages are already complete."; return }
         requestedSelection = selection
         lastJob = job; activeModel = model; activeScope = scope; error = nil
         canSwitchCurrentAnalysisWorkflow = AIConfiguration.isChatGPT(model)
@@ -1475,26 +1483,26 @@ final class SimpleWorkspace: ObservableObject {
         analysisCompletedPages = nil
         analysisIssues = ""
         citationWarning = ""; analysisState = .running
-        status = compareProgram ? "Vergelijken met referentiedocument…" : "Neutrale samenvattingspunten maken…"; error = nil
+        status = compareProgram ? "Comparing with reference document…" : "Creating overview findings…"; error = nil
             do {
                 let warn: @Sendable (Int) async -> Void = { count in
                     await MainActor.run {
                         if AIConfiguration.isChatGPT(model) &&
                             (Task.isCancelled || self.documentID != presentationDocumentID || self.currentAnalysisRunToken != analysisRunToken) { return }
-                        self.citationWarning = "Broncontrole: ongeldige citaten weggelaten. Alleen bevestigde punten worden getoond; de selectie kan onvolledig zijn."
+                        self.citationWarning = "Source check: invalid citations were omitted. Only verified findings are shown; the selection may be incomplete."
                     }
                 }
                 let selected = try PageScope.parse(selection, count: document.pages.count)
                 let selectedPages = PageScope.mask(document.pages, selected: selected)
-                guard selectedPages.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AppError(message: "De gekozen pagina’s bevatten geen leesbare tekst.") }
-                let scope = PageScope.label(selected, count: document.pages.count)
+                guard selectedPages.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AppError(message: "The selected pages contain no readable text.") }
+                let scope = englishPageScopeLabel(selected, count: document.pages.count)
                 if analysisScope != scope { insights = []; analyzed = false; analysisModel = nil; analysisScope = scope }
                 if !compareProgram {
                     let result = try await NeutralOutline.analyze(pages: selectedPages, model: model, focus: context, repairUpdate: { count in
                         await MainActor.run {
                             guard AIConfiguration.isChatGPT(model) else { return }
                             self.chatGPTRepairCount = count
-                            self.status = "Alineapunten: \(self.progress.phaseCompleted) van \(self.progress.phaseTotal) gereed…\(AIConfiguration.phaseModelLabel(model, role: .worker))\(self.chatGPTRepairSuffix)"
+                            self.status = "Paragraph findings: \(self.progress.phaseCompleted) of \(self.progress.phaseTotal) complete…\(AIConfiguration.phaseModelLabel(model, role: .worker))\(self.chatGPTRepairSuffix)"
                         }
                     }, update: { points in
                         if let cloudPresentationID {
@@ -1510,8 +1518,8 @@ final class SimpleWorkspace: ObservableObject {
                                 (Task.isCancelled || self.documentID != presentationDocumentID || self.currentAnalysisRunToken != analysisRunToken) { return }
                             self.progress.update(completed: AIConfiguration.isChatGPT(model) ? current : max(0, current - 1), total: total)
                             self.status = AIConfiguration.isChatGPT(model)
-                                ? "Alineapunten: \(current) van \(total) gereed…\(AIConfiguration.phaseModelLabel(model, role: .worker))\(self.chatGPTRepairSuffix)"
-                                : "Alinea \(current) van \(total) samenvatten…"
+                                ? "Paragraph findings: \(current) of \(total) complete…\(AIConfiguration.phaseModelLabel(model, role: .worker))\(self.chatGPTRepairSuffix)"
+                                : "Summarizing paragraph \(current) of \(total)…"
                         }
                     })
                     try Task.checkCancellation()
@@ -1529,12 +1537,12 @@ final class SimpleWorkspace: ObservableObject {
                     analysisState = result.isEmpty ? .noSummaryPoints : .complete
                     analysisInputKey = jobKey
                     analysisCompletedPages = selectedPages.enumerated().compactMap { $0.element.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.offset + 1 }
-                    status = "Neutrale samenvatting gereed."
+                    status = "Document overview ready."
                     return
                 }
                 guard let program = try currentReference() else {
                     analysisState = .needsProgram
-                    status = "Voeg eerst je referentiedocument toe via Instellingen. Samenvatten en documentchat blijven beschikbaar."
+                    status = "Add a reference document in Settings first. Document summaries and chat remain available."
                     return
                 }
                 let programKey = LocalCache.key([program.name, program.criteria ?? ""] + program.pages)
@@ -1556,9 +1564,9 @@ final class SimpleWorkspace: ObservableObject {
                             self.progress.update(completed: isChatGPT ? current : (current == 0 ? total : max(0, current - 1)), total: total)
                             if isChatGPT {
                                 let role: AIConfiguration.ChatGPTRole = isReviewing ? .orchestrator : .worker
-                                let phase = isReviewing ? "Bronnen controleren aan oorspronkelijke passages…" : "Programmapassages vergelijken…"
+                                let phase = isReviewing ? "Checking citations against source passages…" : "Comparing source passages with the reference…"
                                 self.status = phase + AIConfiguration.phaseModelLabel(model, role: role)
-                            } else { self.status = current == 0 ? "Samenhang controleren aan oorspronkelijke bronnen…" : "AI-analyse: \(current) van \(total)…" }
+                            } else { self.status = current == 0 ? "Checking relationships against the original sources…" : "Analysis: \(current) of \(total)…" }
                         }
                     }
                 try Task.checkCancellation()
@@ -1567,7 +1575,7 @@ final class SimpleWorkspace: ObservableObject {
                 analysisState = result.isEmpty ? (citationWarning.isEmpty ? .noMatches : .unconfirmed) : .complete
                 analysisInputKey = WorkspaceJob(model: model, context: context, selection: selection, compare: true, targeted: targeted).key(pages: document.pages, program: programKey)
                 analysisCompletedPages = selectedPages.enumerated().compactMap { $0.element.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.offset + 1 }
-                status = "\(result.count) verbanden met \(program.name) · \(scope) · Beide broncitaten gecontroleerd."
+                status = "\(result.count) supported matches with \(program.name) · \(scope) · Both source citations verified."
 
             } catch let partial as ParagraphAnalysisIncomplete {
                 if AIConfiguration.isChatGPT(model) &&
@@ -1589,28 +1597,28 @@ final class SimpleWorkspace: ObservableObject {
                     insights = partial.points; analyzed = true; neutralAnalysis = true
                 }
                 analysisState = .incomplete; analysisIssues = partial.localizedDescription
-                status = "Alineasamenvatting onvolledig."
-                analysisScope = (try? PageScope.parse(selection, count: document.pages.count)).map { PageScope.label($0, count: document.pages.count) } ?? selection
+                status = "Paragraph summary incomplete."
+                analysisScope = (try? PageScope.parse(selection, count: document.pages.count)).map { englishPageScopeLabel($0, count: document.pages.count) } ?? selection
             } catch let partial as AppleAnalysisIncomplete {
                 insights = partial.points; analyzed = true; neutralAnalysis = !compareProgram
                 analysisModel = model
                 analysisContext = compareProgram ? context : ""
-                analysisScope = (try? PageScope.parse(selection, count: document.pages.count)).map { PageScope.label($0, count: document.pages.count) } ?? selection
+                analysisScope = (try? PageScope.parse(selection, count: document.pages.count)).map { englishPageScopeLabel($0, count: document.pages.count) } ?? selection
                 if compareProgram, let program = try? currentReference() {
                     analyzedProgramKey = LocalCache.key([program.name, program.criteria ?? ""] + program.pages); analysisProgramName = program.name
                 }
                 analysisState = .incomplete
                 analysisIssues = partial.localizedDescription
-                status = "Analyse onvolledig: \(partial.completed) van \(partial.total) stappen verwerkt."
+                status = "Analysis incomplete: \(partial.completed) of \(partial.total) steps processed."
             } catch {
                 if let cloudPresentationID,
                    (documentID != presentationDocumentID || cloudInsightPresentationID != cloudPresentationID) { return }
                 if AIConfiguration.isChatGPT(model) &&
                     (documentID != presentationDocumentID || currentAnalysisRunToken != analysisRunToken) { return }
                 if error is ChatGPTError { chatGPTFailed = true }
-                analysisIssues = "Analyse niet afgerond. Resultaten kunnen onvolledig zijn."
+                analysisIssues = "Analysis did not finish. Results may be incomplete."
                 analysisState = Task.isCancelled ? .cancelled : .failed
-                status = Task.isCancelled ? "Analyse gestopt." : "Analyse mislukt; eerdere resultaten blijven beschikbaar."
+                status = Task.isCancelled ? "Analysis stopped." : "Analysis failed; earlier results remain available."
                 if !Task.isCancelled { self.error = error.localizedDescription }
             }
     }
@@ -1621,7 +1629,7 @@ final class SimpleWorkspace: ObservableObject {
     @Published private(set) var summaryModel: String?
 
     private var chatGPTRepairSuffix: String {
-        chatGPTRepairCount > 0 ? " · \(chatGPTRepairCount) passages opnieuw aangeboden" : ""
+        chatGPTRepairCount > 0 ? " · \(chatGPTRepairCount) passages retried" : ""
     }
 
     private func makeSummary(pages: [String], model: String) async {
@@ -1651,9 +1659,9 @@ final class SimpleWorkspace: ObservableObject {
                     if AIConfiguration.isChatGPT(model) {
                         let merging = self.progress.isMergingSummary
                         let role: AIConfiguration.ChatGPTRole = merging ? .orchestrator : .worker
-                        let phase = merging ? "Documentsamenvatting samenvoegen: \(self.progress.mergeCompleted) van \(self.progress.phaseTotal)…" : "Document samenvatten: \(current) van \(total)…"
+                        let phase = merging ? "Merging document overview: \(self.progress.mergeCompleted) of \(self.progress.phaseTotal)…" : "Summarizing document: \(current) of \(total)…"
                         self.status = phase + AIConfiguration.phaseModelLabel(model, role: role)
-                    } else { self.status = current == 0 ? "Hoofdpunten samenvoegen tot documentsamenvatting…" : "Document samenvatten: \(current) van \(total)…" }
+                    } else { self.status = current == 0 ? "Merging key points into the document overview…" : "Summarizing document: \(current) of \(total)…" }
                 }
             }
             try Task.checkCancellation()
@@ -1663,14 +1671,14 @@ final class SimpleWorkspace: ObservableObject {
             summaryModel = model
             if result.incompleteNotice == nil { summaryInputKey = LocalCache.key(pages + [model]) }
             summaryError = documentSummary?.incompleteNotice
-            status = summaryError == nil ? "Documentsamenvatting gereed." : "Documentsamenvatting onvolledig."
+            status = summaryError == nil ? "Document overview ready." : "Document overview incomplete."
         } catch {
             if AIConfiguration.isChatGPT(model),
                (documentID != phaseDocumentID || chatGPTModelSwitchToken != phaseSwitchToken) { return }
             if error is ChatGPTError { chatGPTFailed = true }
             if !Task.isCancelled { self.error = error.localizedDescription }
-            summaryError = Task.isCancelled ? "Samenvatting gestopt. Je kunt later hervatten." : error.localizedDescription
-            status = "PDF ingeladen; samenvatting niet afgerond."
+            summaryError = Task.isCancelled ? "Document overview stopped. You can resume it later." : error.localizedDescription
+            status = "PDF loaded; document overview did not finish."
         }
     }
     func summarize(model: String, selection: String = "") {
@@ -1678,14 +1686,14 @@ final class SimpleWorkspace: ObservableObject {
         do {
             let selected = try PageScope.parse(selection, count: document.pages.count)
             let pages = PageScope.mask(document.pages, selected: selected)
-            guard pages.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AppError(message: "De gekozen pagina’s bevatten geen leesbare tekst.") }
+            guard pages.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AppError(message: "The selected pages contain no readable text.") }
             let previousSummaryPages = summaryPages
             if !AIConfiguration.isChatGPT(model) || previousSummaryPages != selected {
                 documentSummary = nil
                 summaryModel = nil
             }
             summaryPages = selected
-            summaryScope = PageScope.label(selected, count: document.pages.count)
+            summaryScope = englishPageScopeLabel(selected, count: document.pages.count)
             markDirty()
             canSwitchCurrentAnalysisWorkflow = false
             busy = true; progress.begin(phases: 1, chatGPT: AIConfiguration.isChatGPT(model))
@@ -1706,13 +1714,13 @@ final class SimpleWorkspace: ObservableObject {
         document = OpenPDF(name: current.name, data: current.data, pages: current.pages, findings: [],
                            readings: current.readings, extractedTables: current.extractedTables,
                            pageExtractionCache: current.pageExtractionCache)
-        if !analyzed { status = "Leesdoel toegepast. Start een nieuwe analyse om het te gebruiken." }
+        if !analyzed { status = "Reading goal applied. Start a new analysis to use it." }
     }
 
     func refreshProgram() {
         do {
             let program = try currentReference()
-            programName = program?.name ?? "Geen referentiedocument — voeg dit toe via Instellingen"
+            programName = program?.name ?? "No reference document — add one in Settings"
             let key = program.map { LocalCache.key([$0.name, $0.criteria ?? ""] + $0.pages) }
             programIdentity = key ?? "none"
             if archivedReference == nil { observedReferenceSettings = programIdentity }
@@ -1724,24 +1732,28 @@ final class SimpleWorkspace: ObservableObject {
     func showPage(_ number: Int) { page = number; navigationID = UUID() }
 
     var exportContext: String {
-        (analysisIssues.isEmpty ? "" : analysisIssues + "\n") + (neutralAnalysis ? "Neutrale samenvatting · \(analysisScope)" : analyzed ? "\(analysisScope)\nReferentiedocument: \(analysisProgramName)\nAanvullende focus: \(analysisContext)" : localFocus)
+        (analysisIssues.isEmpty ? "" : analysisIssues + "\n") + (neutralAnalysis ? "Document overview · \(analysisScope)" : analyzed ? "\(analysisScope)\nReference document: \(analysisProgramName)\nReading goal: \(analysisContext)" : localFocus)
     }
 
     var layoutNotice: String {
         guard let document else { return "" }
         let skipped = document.readings.enumerated().filter { !$0.element.notice.isEmpty && $0.element.text.isEmpty }.map { String($0.offset + 1) }
-        let regionNotice = "Alleen het handmatig aangewezen tekstgebied is meegenomen."
-        let limited = document.readings.enumerated().filter { !$0.element.text.isEmpty && $0.element.notice.contains(regionNotice) }.map { String($0.offset + 1) }
-        let ocrNotice = "Afbeeldingstabel met OCR gelezen."
-        let ocrPages = document.readings.enumerated().filter { $0.element.notice.contains(ocrNotice) }.map { String($0.offset + 1) }
+        let regionNotices = ["Alleen het handmatig aangewezen tekstgebied is meegenomen.", "Only the manually selected text region was included."]
+        let limited = document.readings.enumerated().filter { reading in
+            !reading.element.text.isEmpty && regionNotices.contains { reading.element.notice.contains($0) }
+        }.map { String($0.offset + 1) }
+        let ocrNotices = ["Afbeeldingstabel met OCR gelezen", "An image table was read with OCR"]
+        let ocrPages = document.readings.enumerated().filter { reading in
+            ocrNotices.contains { reading.element.notice.contains($0) }
+        }.map { String($0.offset + 1) }
         return [
-            skipped.isEmpty ? "" : "Niet betrouwbaar gelezen; pagina’s overgeslagen: " + skipped.joined(separator: ", "),
-            limited.isEmpty ? "" : "Alleen geselecteerd tekstgebied verwerkt op pagina: " + limited.joined(separator: ", "),
-            ocrPages.isEmpty ? "" : "Afbeeldingstabellen met OCR gelezen; deze zijn niet in de AI-analyse opgenomen op pagina: " + ocrPages.joined(separator: ", ")
+            skipped.isEmpty ? "" : "Pages could not be read reliably and were skipped: " + skipped.joined(separator: ", "),
+            limited.isEmpty ? "" : "Only the selected text region was processed on pages: " + limited.joined(separator: ", "),
+            ocrPages.isEmpty ? "" : "Image tables were read with OCR and excluded from AI analysis on pages: " + ocrPages.joined(separator: ", ")
         ].filter { !$0.isEmpty }.joined(separator: "\n")
     }
     func correctLayout(page: Int, override: LayoutOverride) async throws {
-        guard canStartAnalysis, tableAnalysisID == nil, let old = document else { throw AppError(message: "Wacht tot de analyse klaar of gestopt is.") }
+        guard canStartAnalysis, tableAnalysisID == nil, let old = document else { throw AppError(message: "Wait until analysis finishes or stops.") }
         let expectedDocumentID = documentID
         busy = true; defer { busy = false }
         let data = old.data
@@ -1751,7 +1763,7 @@ final class SimpleWorkspace: ObservableObject {
         let oldPageCache = old.pageExtractionCache
         let extraction = Task.detached {
             try Task.checkCancellation()
-            guard let pdf = PDFDocument(data: data), !pdf.isLocked else { throw AppError(message: "PDF niet leesbaar.") }
+            guard let pdf = PDFDocument(data: data), !pdf.isLocked else { throw AppError(message: "The PDF could not be read.") }
             return try PageLayout.extract(pdf: pdf, overrides: overrides, includeTables: true,
                                           sourceFingerprint: sourceFingerprint, reusing: oldPageCache)
         }
@@ -1773,9 +1785,9 @@ final class SimpleWorkspace: ObservableObject {
         committeeReviewStatus = ""; committeeReviewError = nil
         committeeReviewCompleted = 0; committeeReviewTotal = 0
         keyPointsReady = false; analyzed = false; analysisState = .notStarted
-        analysisIssues = "Tekstindeling gewijzigd. Eerdere resultaten zijn verwijderd; start de analyse opnieuw."
+        analysisIssues = "Text layout changed. Previous results were removed; run the analysis again."
         documentChat.reset(); pageChat.reset(); summaryRetry = nil; retryParameters = nil
-        summaryError = nil; summaryScope = "Hele document"; analysisScope = "Hele document"
+        summaryError = nil; summaryScope = "Entire document"; analysisScope = "Entire document"
         analysisContext = ""; neutralAnalysis = false; analysisProgramName = ""; analyzedProgramKey = nil; programChanged = false
         citationWarning = ""; keyPointIssues = ""
         let isSnapshot = selectionDocumentKey.hasPrefix("snapshot-")
@@ -1794,11 +1806,11 @@ final class SimpleWorkspace: ObservableObject {
             annotations = SavedWork.read([String: PointAnnotation].self, key: "annotations-" + selectionDocumentKey) ?? [:]
         }
         documentID = UUID(); chatGPTModelSwitchToken = UUID(); analysisPhase = nil; analysisModel = nil; isSwitchingChatGPTModel = false
-        status = "Indeling opgeslagen. Start de analyse opnieuw."
+        status = "Layout saved. Run the analysis again."
     }
 
     var exportNotice: String {
-        let cancelled = analysisState == .cancelled ? "De analyse is gestopt voordat alle onderdelen waren verwerkt." : ""
+        let cancelled = analysisState == .cancelled ? "Analysis stopped before all stages were processed." : ""
         return [cancelled, completionDetails].filter { !$0.isEmpty }.joined(separator: "\n\n")
     }
 
@@ -1860,7 +1872,7 @@ final class SimpleWorkspace: ObservableObject {
         let snapshotID = documentID
         exporting = true
         exportWriting = false
-        status = "PDF exporteren…"
+        status = "Exporting PDF…"
         exportTask = Task { @MainActor in
             do {
                 // Rendering owns its CoreText context and PDF objects on a background task.
@@ -1875,11 +1887,11 @@ final class SimpleWorkspace: ObservableObject {
                 // during rendering, but cannot interrupt a write that has already begun.
                 try Task.checkCancellation()
                 self.exportWriting = true
-                self.status = "PDF opslaan…"
+                self.status = "Saving PDF…"
                 try await Task.detached(priority: .utility) { try data.write(to: url, options: .atomic) }.value
-                if self.documentID == snapshotID { self.status = "PDF opgeslagen: \(url.lastPathComponent)" }
+                if self.documentID == snapshotID { self.status = "PDF saved: \(url.lastPathComponent)" }
             } catch is CancellationError {
-                if self.documentID == snapshotID { self.status = "PDF-export geannuleerd." }
+                if self.documentID == snapshotID { self.status = "PDF export canceled." }
             } catch {
                 self.error = error.localizedDescription
             }
@@ -1893,7 +1905,7 @@ final class SimpleWorkspace: ObservableObject {
         guard reviewed.recognizedWithOCR == true else { return }
         tables[index] = reviewed
         markDirty()
-        status = reviewed.isOCRConfirmed ? "Tabel aan de bron gecontroleerd. Tabelanalyse is beschikbaar." : "Tabelcorrecties bewaard; controleer de resterende cellen."
+        status = reviewed.isOCRConfirmed ? "Table checked against the source. Table analysis is available." : "Table corrections saved; review the remaining cells."
     }
     func analyzeReviewedTable(id: String, model: String) {
         guard canStartAnalysis, tableAnalysisID == nil,
@@ -1913,9 +1925,9 @@ final class SimpleWorkspace: ObservableObject {
                 review.summary = result; review.summaryModel = model
                 tables[index].ocrReview = review
                 markDirty()
-                status = "Gecontroleerde tabelgegevens toegevoegd aan Overzicht."
+                status = "Reviewed table data added to the overview."
             } catch is CancellationError {
-                if documentID == docID { status = "Tabelanalyse gestopt." }
+                if documentID == docID { status = "Table analysis stopped." }
             } catch { if documentID == docID { tableAnalysisError = error.localizedDescription } }
         }
     }
@@ -1924,7 +1936,7 @@ final class SimpleWorkspace: ObservableObject {
     func archive(readingPage: Int, viewState: WorkspaceViewState? = nil, allowingTerminationAutosave: Bool = false) throws -> WorkspaceArchive {
         let admission = canStartAnalysis || (allowingTerminationAutosave && terminationAutosaveInProgress &&
             !busy && !committeeReviewBusy && !isSwitchingChatGPTModel)
-        guard admission, tableAnalysisID == nil, let document else { throw AppError(message: "Stop of voltooi de huidige verwerking voordat je het werkdocument bewaart.") }
+        guard admission, tableAnalysisID == nil, let document else { throw AppError(message: "Stop or finish the current processing before saving the work document.") }
         let latestReviewKeys = Set(committeeReviews.values.map(Self.committeeReviewKey))
         var reviews = committeeReviewHistory.values.filter { !latestReviewKeys.contains(Self.committeeReviewKey($0)) }
             .sorted { Self.committeeReviewKey($0) < Self.committeeReviewKey($1) }
@@ -1950,7 +1962,7 @@ final class SimpleWorkspace: ObservableObject {
         try restore(saved, persist: persist, prevalidated: false)
     }
     private func restore(_ saved: WorkspaceArchive, persist: Bool, prevalidated: Bool) throws {
-        guard canStartAnalysis else { throw AppError(message: "Wacht tot de huidige verwerking klaar is.") }
+        guard canStartAnalysis else { throw AppError(message: "Wait until the current processing finishes.") }
         if !prevalidated { try saved.validate() }
         releaseOpenedWorkdocumentAccess()
         observedReferenceSettings = (try? loadProgram()).map { LocalCache.key([$0.name, $0.criteria ?? ""] + $0.pages) } ?? "none"
@@ -1958,10 +1970,14 @@ final class SimpleWorkspace: ObservableObject {
         tableAnalysisTask?.cancel(); tableAnalysisID = nil; tableAnalysisError = nil
         documentChat.reset(); pageChat.reset()
         document = OpenPDF(name: saved.name, data: saved.pdf, pages: saved.pages, findings: [], readings: saved.readings, extractedTables: saved.tables)
-        documentSummary = saved.summary; summaryScope = saved.summaryScope; summaryPages = saved.summaryPages
-        keyPoints = saved.highlights; highlightScope = saved.highlightScope; keyPointsReady = saved.highlightsReady
+        documentSummary = saved.summary; summaryScope = englishPageScopeLabel(saved.summaryPages, count: saved.pages.count); summaryPages = saved.summaryPages
+        keyPoints = saved.highlights
+        let restoredHighlightPages = saved.highlightPages.isEmpty ? Array(1...max(1, saved.pages.count)) : saved.highlightPages
+        highlightScope = englishPageScopeLabel(restoredHighlightPages, count: saved.pages.count); keyPointsReady = saved.highlightsReady
         tables = saved.tables; insights = saved.insights; analyzed = saved.analyzed; neutralAnalysis = saved.neutral
-        analysisScope = saved.analysisScope; analysisContext = saved.analysisContext
+        let restoredAnalysisScope = (try? PageScope.parse(saved.job?.selection ?? "", count: saved.pages.count))
+            .map { englishPageScopeLabel($0, count: saved.pages.count) } ?? saved.analysisScope
+        analysisScope = restoredAnalysisScope; analysisContext = saved.analysisContext
         analysisState = saved.state == .running ? .incomplete : saved.state
         summaryError = saved.summaryError; analysisIssues = saved.analysisIssues; keyPointIssues = saved.highlightIssues; citationWarning = saved.citationWarning
         selectionDocumentKey = "snapshot-" + (saved.snapshotID ?? UUID()).uuidString
@@ -1979,12 +1995,12 @@ final class SimpleWorkspace: ObservableObject {
         publishCommitteeReviewHistory(restoredCommitteeReviews)
         committeeReviewError = nil
         let restoredSelectedReview = committeeReviews[meetingPurpose.rawValue]
-        committeeReviewStatus = restoredSelectedReview.map { _ in "Bewaarde profielbeoordeling beschikbaar." } ?? ""
+        committeeReviewStatus = restoredSelectedReview.map { _ in "Saved profile review available." } ?? ""
         committeeReviewCompleted = restoredSelectedReview?.entries.filter { $0.rating != .unassessed }.count ?? 0
         committeeReviewTotal = restoredSelectedReview?.entries.count ?? 0
         restoredViewState = saved.viewState
         requestedSelection = saved.job?.selection ?? ""
-        activeModel = saved.model; activeScope = saved.analysisScope; focus = saved.focus; localFocus = saved.focus; lastJob = saved.job
+        activeModel = saved.model; activeScope = restoredAnalysisScope; focus = saved.focus; localFocus = saved.focus; lastJob = saved.job
         analysisProgramName = saved.programName; analyzedProgramKey = saved.programKey
         summaryInputKey = saved.summaryKey; highlightsInputKey = saved.highlightsKey; analysisInputKey = saved.analysisKey
         analysisCompletedPages = saved.analysisCompletedPages
@@ -2002,7 +2018,7 @@ final class SimpleWorkspace: ObservableObject {
         chatGPTModelSwitchToken = UUID(); analysisPhase = nil; isSwitchingChatGPTModel = false
         processingName = saved.name; canSwitchCurrentAnalysisWorkflow = false
         error = nil; chatGPTFailed = false; processingPresented = false; processingMessage = nil; showsWelcome = false
-        status = "Werkdocument hersteld. Bewaarde resultaten zijn beschikbaar."
+        status = "Work document restored. Saved results are available."
         refreshProgram()
         markRestoredClean()
         guard persist else { return }
@@ -2011,7 +2027,7 @@ final class SimpleWorkspace: ObservableObject {
         persistChosenPassages()
         persistSelectionMetadata()
         do { try SavedSelection.write(saved.starred, documentKey: selectionDocumentKey) }
-        catch { self.error = "Werkdocument geopend; selectie kon niet lokaal worden bewaard: " + error.localizedDescription }
+        catch { self.error = "Work document opened; selection could not be saved locally: " + error.localizedDescription }
     }
 
     func normalizeSelectionMetadata() {
@@ -2048,7 +2064,7 @@ final class SimpleWorkspace: ObservableObject {
             let record = try SavedChartAnalysis.make(selected: selected, explanation: explanation)
             savedChartAnalyses.append(record)
             markDirty()
-        } catch { self.error = "De diagramuitleg kon niet in het werkdocument worden opgenomen: " + error.localizedDescription }
+        } catch { self.error = "The chart explanation could not be added to the work document: " + error.localizedDescription }
     }
 
     private func recordRecentWorkspace(_ url: URL) {
@@ -2088,7 +2104,7 @@ final class SimpleWorkspace: ObservableObject {
             let retainDestinationAsOpenedWorkdocument = openedWorkdocumentURL != nil
             let hasScopedAccess = url.startAccessingSecurityScopedResource()
             let writer = workspaceArchiveWriter
-            exporting = true; status = "Werkdocument bewaren…"
+            exporting = true; status = "Saving work document…"
             Task {
                 do {
                     try await Task.detached(priority: .utility) { try writer(snapshot, url) }.value
@@ -2099,7 +2115,7 @@ final class SimpleWorkspace: ObservableObject {
                         url.stopAccessingSecurityScopedResource()
                     }
                     exporting = false
-                    status = "Werkdocument bewaard: " + url.lastPathComponent
+                    status = "Work document saved: " + url.lastPathComponent
                     recordRecentWorkspace(url)
                     completion?(documentID == capturedDocumentID)
                 }
@@ -2125,7 +2141,7 @@ final class SimpleWorkspace: ObservableObject {
     func openWorkspace(at url: URL, replacingRecent: RecentWorkspaceDocuments.Entry? = nil) {
         guard canStartAnalysis else { return }
         let acquiredAccess = url.startAccessingSecurityScopedResource()
-        exporting = true; status = "Werkdocument openen…"
+        exporting = true; status = "Opening work document…"
         Task {
             do {
                 let saved = try await Task.detached(priority: .userInitiated) { try WorkspaceArchive.read(url) }.value
@@ -2155,4 +2171,19 @@ enum AnalysisState: String, Codable {
     case incomplete = "Analyse gedeeltelijk afgerond; ontbrekende stappen opnieuw proberen."
     case failed = "Analyse mislukt; probeer opnieuw."
     case cancelled = "Analyse gestopt; je kunt opnieuw analyseren."
+
+    var englishTitle: String {
+        switch self {
+        case .notStarted: return "Not analyzed yet"
+        case .running: return "Analysis in progress…"
+        case .needsProgram: return "Add a reference document in Settings to start the analysis."
+        case .noSummaryPoints: return "No summary points with confirmed source quotes were found."
+        case .noMatches: return "Analysis complete: no supported connections were found."
+        case .unconfirmed: return "Analysis complete: the connections found could not be confirmed with source quotes."
+        case .complete: return "Analysis complete"
+        case .incomplete: return "Analysis partially complete; retry the missing steps."
+        case .failed: return "Analysis failed; try again."
+        case .cancelled: return "Analysis stopped; you can run it again."
+        }
+    }
 }

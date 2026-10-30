@@ -20,18 +20,18 @@ struct FocusEditor: View {
     let apply: (AnalysisFocus) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(UIStrings.text("Leesdoel")).font(.title2.bold())
-            Text(UIStrings.text("Wat wil je uit dit document halen? Geef onderwerpen of vragen mee, zoals kosten, afhankelijkheden en toezeggingen. Een referentiedocument is optioneel.")).foregroundStyle(.secondary)
+            Text("Reading goal").font(.title2.bold())
+            Text("What do you want to learn from this document? Add topics or questions such as costs, dependencies, and commitments. A reference document is optional.").foregroundStyle(.secondary)
             TextEditor(text: $topics).font(.body).frame(height: 160).padding(8)
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
-                .accessibilityLabel(UIStrings.text("Aanvullende aandachtspunten"))
-            Toggle(UIStrings.text("Bewaar voor volgende documenten en appstarts"), isOn: $saveForLater)
+                .accessibilityLabel("Additional reading goals")
+            Toggle("Save for future documents and app launches", isOn: $saveForLater)
             Text("\(topics.utf8.count) / 1000 bytes").font(.caption)
             HStack {
-                Button(UIStrings.text("Wis bewaarde aandachtspunten"), role: .destructive) { savedFocus = ""; topics = "" }
+                Button("Clear saved reading goals", role: .destructive) { savedFocus = ""; topics = "" }
                 Spacer()
-                Button(UIStrings.text("Annuleer")) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(UIStrings.text("Toepassen")) {
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Apply") {
                     if saveForLater { savedFocus = topics }
                     apply(.init(topics: topics)); dismiss()
                 }.disabled(topics.utf8.count > 1000).buttonStyle(FocusPrimaryButtonStyle())

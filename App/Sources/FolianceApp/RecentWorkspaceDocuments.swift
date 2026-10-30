@@ -27,11 +27,11 @@ final class RecentWorkspaceDocuments: ObservableObject {
         var errorDescription: String? {
             switch self {
             case .unsupportedFile:
-                "Kies een bestaand Foliance-werkdocument (.foliance)."
+                "Choose an existing Foliance work document (.foliance)."
             case .missing:
-                "Dit werkdocument staat niet meer op deze locatie. Verplaats het terug of open het vanaf de nieuwe locatie."
+                "This work document is no longer at this location. Move it back or open it from its new location."
             case .inaccessible:
-                "Foliance heeft geen toegang tot dit werkdocument. Open het via de bestandskiezer om opnieuw toegang te geven."
+                "Foliance cannot access this work document. Open it in the file picker to grant access again."
             }
         }
     }

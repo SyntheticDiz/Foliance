@@ -5,10 +5,10 @@ struct ProcessingStatusView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(UIStrings.text("Analyseoverzicht")).font(.headline)
+                Text(UIStrings.text("Analysis status")).font(.headline)
                 Spacer()
                 Text(UIStrings.text(workspace.activeScope)).font(.caption)
-                if !workspace.activeModel.isEmpty { Text(UIStrings.text("Apple Intelligence · lokaal")).font(.caption).foregroundStyle(.secondary) }
+                if !workspace.activeModel.isEmpty { Text(providerLabel).font(.caption).foregroundStyle(.secondary) }
             }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 18) { stages }
@@ -32,36 +32,42 @@ struct ProcessingStatusView: View {
                 }.disabled(!workspace.canStartAnalysis)
             }
             if !workspace.activeModel.isEmpty {
-                DisclosureGroup(UIStrings.text("Modeldetails")) {
+                DisclosureGroup(UIStrings.text("Model details")) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(UIStrings.text("Huidige keuze: \(AIConfiguration.label(workspace.activeModel))"))
-                        Text(UIStrings.text("Punten: \(workspace.analysisModel.map(AIConfiguration.label) ?? "Nog niet vastgelegd")"))
-                        Text(UIStrings.text("Documentsamenvatting: \(workspace.summaryModel.map(AIConfiguration.label) ?? "Nog niet vastgelegd")"))
-                        Text(UIStrings.text("Bronpassages: \(workspace.highlightModel.map(AIConfiguration.label) ?? "Nog niet vastgelegd")"))
+                        Text("Current choice: \(AIConfiguration.label(workspace.activeModel))")
+                        Text("Findings: \(workspace.analysisModel.map(AIConfiguration.label) ?? "Not recorded yet")")
+                        Text("Document overview: \(workspace.summaryModel.map(AIConfiguration.label) ?? "Not recorded yet")")
+                        Text("Source passages: \(workspace.highlightModel.map(AIConfiguration.label) ?? "Not recorded yet")")
                     }.font(.caption).textSelection(.enabled)
                 }.font(.caption)
             }
         }.padding(12).background(SPTheme.surface, in: RoundedRectangle(cornerRadius: 12))
     }
+    private var providerLabel: String {
+        if AIConfiguration.isChatGPT(workspace.activeModel) {
+            return AIConfiguration.usesChatGPTPlan(workspace.activeModel) ? "ChatGPT plan · online" : "OpenAI API · online"
+        }
+        return "Apple Intelligence · on-device"
+    }
     @ViewBuilder private var recovery: some View {
-        if workspace.canResume { Button(UIStrings.text("Ontbrekende onderdelen herstellen")) { workspace.resumeMissing() } }
-        if workspace.summaryError != nil { Button(UIStrings.text("Overzicht opnieuw")) { workspace.retrySummary() } }
-        if !workspace.keyPointIssues.isEmpty { Button(UIStrings.text("Bronpassages opnieuw")) { workspace.retryHighlights() } }
-        if workspace.analysisState == .incomplete || workspace.analysisState == .failed || workspace.analysisState == .cancelled { Button(UIStrings.text("Punten opnieuw")) { workspace.retryIncompleteAnalysis() } }
+        if workspace.canResume { Button(UIStrings.text("Resume missing sections")) { workspace.resumeMissing() } }
+        if workspace.summaryError != nil { Button(UIStrings.text("Retry overview")) { workspace.retrySummary() } }
+        if !workspace.keyPointIssues.isEmpty { Button(UIStrings.text("Retry source excerpts")) { workspace.retryHighlights() } }
+        if workspace.analysisState == .incomplete || workspace.analysisState == .failed || workspace.analysisState == .cancelled { Button(UIStrings.text("Retry points")) { workspace.retryIncompleteAnalysis() } }
     }
     @ViewBuilder private var stages: some View {
-        stage("PDF-tekst", ready: workspace.document != nil, issue: !workspace.layoutNotice.isEmpty)
+        stage("Read PDF", ready: workspace.document != nil, issue: !workspace.layoutNotice.isEmpty)
         if workspace.meetingPurpose != .raad {
             stage(workspace.meetingPurpose.title,
                   ready: workspace.committeeReviews[workspace.meetingPurpose.rawValue]?.complete == true,
                   issue: workspace.committeeReviewError != nil, active: workspace.committeeReviewBusy)
         }
-        stage("Overzicht", ready: workspace.documentSummary != nil, issue: workspace.summaryError != nil)
-        stage("Bronpassages", ready: workspace.keyPointsReady, issue: !workspace.keyPointIssues.isEmpty)
-        stage("Punten", ready: workspace.analyzed && workspace.analysisState != .running, issue: [.needsProgram, .incomplete, .failed, .cancelled].contains(workspace.analysisState))
+        stage("Document overview", ready: workspace.documentSummary != nil, issue: workspace.summaryError != nil)
+        stage("Key passages", ready: workspace.keyPointsReady, issue: !workspace.keyPointIssues.isEmpty)
+        stage("Findings", ready: workspace.analyzed && workspace.analysisState != .running, issue: [.needsProgram, .incomplete, .failed, .cancelled].contains(workspace.analysisState))
     }
     private func stage(_ title: String, ready: Bool, issue: Bool, active: Bool = false) -> some View {
-        Label(UIStrings.text(title) + ": " + UIStrings.text(issue ? "Vraagt aandacht" : ready ? "Gereed" : active ? "Bezig" : "Nog niet gereed"),
+        Label(title + ": " + (issue ? "Needs attention" : ready ? "Ready" : active ? "In progress" : "Not started"),
               systemImage: issue ? "exclamationmark.triangle" : ready ? "checkmark.circle" : "circle")
     }
 }

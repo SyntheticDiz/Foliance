@@ -52,12 +52,12 @@ struct CommitteeReviewView<PointContent: View>: View {
         let checkGroups = orderedIDs.compactMap { checkByID[$0] }
         let importantCount = rows.filter { $0.assessment.rating == .important }.count
         return VStack(alignment: .leading, spacing: 16) {
-            FocusChoiceTabs(UIStrings.text("Toon punten"), selection: $showAll, options: [
-                FocusChoiceOption(value: false, title: UIStrings.text("Belangrijkste"), count: importantCount),
-                FocusChoiceOption(value: true, title: UIStrings.text("Alle punten"), count: rows.count)
+            FocusChoiceTabs(UIStrings.text("Show points"), selection: $showAll, options: [
+                FocusChoiceOption(value: false, title: UIStrings.text("Most important"), count: importantCount),
+                FocusChoiceOption(value: true, title: UIStrings.text("All points"), count: rows.count)
             ])
                 .frame(maxWidth: 640)
-                .help(UIStrings.text("Aantallen zijn bronpassages; een passage kan meerdere punten bevatten."))
+                .help(UIStrings.text("Counts refer to source passages; a passage can contain several findings."))
             if workspace.committeeReviews[workspace.meetingPurpose.rawValue] != nil {
                 ForEach(mainGroups) { group in
                     categoryGroup(group)
@@ -78,7 +78,7 @@ struct CommitteeReviewView<PointContent: View>: View {
                         }.padding(.top, 8).frame(maxWidth: .infinity, alignment: .leading)
                     } label: {
                         HStack {
-                            Text(UIStrings.text("Nog controleren")).font(.headline)
+                            Text(UIStrings.text("Needs review")).font(.headline)
                             Spacer()
                             Text("\(checkGroups.reduce(0) { $0 + $1.rows.count }) " + UIStrings.text("passages"))
                                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
@@ -86,23 +86,23 @@ struct CommitteeReviewView<PointContent: View>: View {
                     }.padding(.top, 12)
                 }
                 if mainGroups.isEmpty && checkGroups.isEmpty {
-                    Text(UIStrings.text(showAll
-                        ? "Geen passages voor deze filters. Pas de filters aan om andere passages te bekijken."
-                        : "Geen belangrijk bevonden passages in deze weergave. Bekijk Alle punten of pas de filters aan."))
+                    Text(showAll
+                        ? "No passages match these filters. Adjust the filters to see other passages."
+                        : "No passages were marked as important in this view. Show all findings or adjust the filters.")
                         .foregroundStyle(.secondary)
                 }
                 if showAll, let snapshot, !snapshot.presentation.unmatchedPoints.isEmpty {
-                    DisclosureGroup(UIStrings.text("Overige bestaande punten") + " (\(snapshot.presentation.unmatchedPoints.count))") {
+                    DisclosureGroup(UIStrings.text("Other existing points") + " (\(snapshot.presentation.unmatchedPoints.count))") {
                         ForEach(snapshot.presentation.unmatchedPoints.filter { PointDisplayFilter.matches($0, pages: selectedPages, reviewFilter: reviewFilter, annotation: workspace.annotation(for: $0)) }) { point in
-                            pointContent(point, .init(label: "Koppeling controleren"))
+                            pointContent(point, .init(label: "Check link"))
                         }
                     }
                 }
             } else {
-                Text(UIStrings.text("Nog geen gerichte beoordeling beschikbaar. De bron en bestaande analyse blijven behouden.")).foregroundStyle(.secondary)
+                Text(UIStrings.text("No profile review is available yet. The source and existing analysis remain available.")).foregroundStyle(.secondary)
                 if showAll {
                     ForEach(workspace.organizedInsights.filter { PointDisplayFilter.matches($0, pages: selectedPages, reviewFilter: reviewFilter, annotation: workspace.annotation(for: $0)) }) { point in
-                        pointContent(point, .init(label: "Nog niet beoordeeld"))
+                        pointContent(point, .init(label: "Not assessed yet"))
                     }
                 }
             }
@@ -171,7 +171,7 @@ struct CommitteeReviewView<PointContent: View>: View {
                 Spacer()
                 let count = group.importantCount
                 if count > 0 {
-                    Text("\(count) " + UIStrings.text("belangrijk")).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    Text("\(count) " + UIStrings.text("important")).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 } else {
                     Text("\(categoryRows.count) " + UIStrings.text(categoryRows.count == 1 ? "passage" : "passages")).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
@@ -206,7 +206,7 @@ struct CommitteeReviewView<PointContent: View>: View {
                 ForEach(Array(rows.prefix(limit)), id: \.scrollID) { row in assessmentRow(row) }
             }
             if rows.count > limit {
-                Button(UIStrings.text("Toon meer passages")) { visibleLimits[limitKey] = limit + 12 }.padding(.top, 8)
+                Button(UIStrings.text("Show more passages")) { visibleLimits[limitKey] = limit + 12 }.padding(.top, 8)
             }
         }.padding(.top, 8).frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -220,7 +220,7 @@ struct CommitteeReviewView<PointContent: View>: View {
                 if row.points.count > 1 {
                     DisclosureGroup(isExpanded: Binding(get: { expandedPassages.contains(row.id) }, set: { if $0 { expandedPassages.insert(row.id) } else { expandedPassages.remove(row.id) } })) {
                         ForEach(Array(row.points.dropFirst())) { point in pointContent(point, .init(label: context.label)) }
-                    } label: { Text(UIStrings.text("Meer punten uit deze alinea") + " (\(row.points.count - 1))").font(.caption) }
+                    } label: { Text(UIStrings.text("More findings from this paragraph") + " (\(row.points.count - 1))").font(.caption) }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 12) {
@@ -229,13 +229,13 @@ struct CommitteeReviewView<PointContent: View>: View {
                         toggleSourceQuoteExpansion(assessment)
                     } label: {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(UIStrings.text("Bronpassage") + " · p. " + assessment.sources.map { String($0.page) }.joined(separator: ", "))
+                            Text(UIStrings.text("Source passage") + " · p. " + assessment.sources.map { String($0.page) }.joined(separator: ", "))
                                 .font(.system(size: 21, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
                         }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(UIStrings.text("Bronpassage") + " · p. " + assessment.sources.map { String($0.page) }.joined(separator: ", "))
-                    .accessibilityHint(UIStrings.text("Open deze bronpassage in de PDF"))
+                    .accessibilityLabel(UIStrings.text("Source passage") + " · p. " + assessment.sources.map { String($0.page) }.joined(separator: ", "))
+                    .accessibilityHint(UIStrings.text("Open this source passage in the PDF"))
                     sourceQuotePreview(assessment)
                     Text(UIStrings.text(context.label)).font(.caption.weight(.semibold)).foregroundStyle(assessment.rating == .unassessed || assessment.rating == .uncertain ? Color.orange : Color.secondary)
                     ViewThatFits(in: .horizontal) {
@@ -282,9 +282,9 @@ struct CommitteeReviewView<PointContent: View>: View {
         else { expandedSourceQuotes.insert(passageID) }
     }
     @ViewBuilder private func sourceOnlyActions(_ assessment: CommitteeAssessmentService.Assessment) -> some View {
-        Button(UIStrings.text("Lees passage")) { readerPoint = sourcePoint(assessment) }
+        Button(UIStrings.text("Read passage")) { readerPoint = sourcePoint(assessment) }
             .buttonStyle(FocusQuietActionStyle())
-        Button(UIStrings.text(expandedSourceDetails.contains(assessment.passageID) ? "Minder details" : "Details")) {
+        Button(expandedSourceDetails.contains(assessment.passageID) ? "Less detail" : "Details") {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
                 if expandedSourceDetails.contains(assessment.passageID) { expandedSourceDetails.remove(assessment.passageID) }
                 else { expandedSourceDetails.insert(assessment.passageID) }
@@ -293,9 +293,9 @@ struct CommitteeReviewView<PointContent: View>: View {
     }
     @ViewBuilder private func sourceOnlyDetails(_ assessment: CommitteeAssessmentService.Assessment) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(UIStrings.text("Waarom is dit relevant voor het gekozen leesdoel?")).font(.caption.bold())
+            Text(UIStrings.text("Why it matters for this reading goal")).font(.caption.bold())
             Text(assessment.reason).textSelection(.enabled)
-            Button(UIStrings.text("Opnemen in samenvatting"), systemImage: "plus") {
+            Button(UIStrings.text("Include in summary"), systemImage: "plus") {
             _ = workspace.addChosenPassage(.init(text: assessment.sources.map(\.quote).joined(separator: "\n"), pages: assessment.sources.map(\.page), sources: assessment.sources.map { .init(page: $0.page, quote: $0.quote) }))
             }.buttonStyle(FocusQuietActionStyle()).disabled(workspace.exporting)
         }.font(.callout)
@@ -345,15 +345,15 @@ struct CommitteeReviewView<PointContent: View>: View {
         if let index = within.firstIndex(where: { $0.id == row.id }) { visibleLimits[key] = max(12, index + 1) }
     }
     private func sourcePoint(_ assessment: CommitteeAssessmentService.Assessment) -> Insight {
-        Insight(title: "Volledige bronpassage", summary: "", relevance: "", question: "", quote: assessment.sources.first?.quote ?? "", page: assessment.sources.first?.page ?? 1, passageID: assessment.passageID, passageSources: assessment.sources)
+        Insight(title: "Full source passage", summary: "", relevance: "", question: "", quote: assessment.sources.first?.quote ?? "", page: assessment.sources.first?.page ?? 1, passageID: assessment.passageID, passageSources: assessment.sources)
     }
     private func ratingTitle(_ rating: CommitteeAssessmentService.Rating) -> String {
         switch rating {
-        case .important: "Belangrijk voor dit leesdoel"
-        case .relevant: "Relevant voor dit leesdoel"
-        case .other: "Andere onderwerpen"
-        case .uncertain: "Twijfel: controleer de volledige alinea"
-        case .unassessed: "Niet automatisch beoordeeld"
+        case .important: "Important for this reading goal"
+        case .relevant: "Relevant for this reading goal"
+        case .other: "Other topics"
+        case .uncertain: "Uncertain: check the full passage"
+        case .unassessed: "Not assessed automatically"
         }
     }
 }

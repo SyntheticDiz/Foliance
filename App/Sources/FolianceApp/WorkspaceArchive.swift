@@ -106,7 +106,7 @@ struct WorkspaceArchive: Codable, Sendable {
                       (rectangular || diagnosticRaggedTextTable) &&
                       (table.recognizedWithOCR != true || (!table.headers.isEmpty && !table.rows.isEmpty))
               }) else {
-            throw AppError(message: "Dit werkdocument is ongeldig of gebruikt een niet-ondersteunde versie.")
+            throw AppError(message: "This work document is invalid or uses an unsupported version.")
         }
         if let job { _ = try PageScope.parse(job.selection, count: pages.count) }
         // Commission reviews are optional derived records. Their current input
@@ -181,7 +181,7 @@ struct WorkspaceArchive: Codable, Sendable {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        guard size <= 250_000_000 else { throw AppError(message: "Dit werkdocument is te groot (maximaal 250 MB).") }
+        guard size <= 250_000_000 else { throw AppError(message: "This work document is too large (maximum 250 MB).") }
         var value = try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
         try value.validate()
         value.committeeReviews = value.committeeReviews.map { validCommitteeReviews($0, pages: value.pages) }
@@ -198,19 +198,19 @@ struct WorkspaceArchive: Codable, Sendable {
         try validate()
         if let threads = savedChatThreads,
            !threads.allSatisfy({ SavedChatThread.validate($0, pageCount: pages.count) }) {
-            throw AppError(message: "Een bewaarde documentchat is ongeldig. Controleer de broncitaten voordat je het werkdocument opnieuw bewaart.")
+            throw AppError(message: "A saved document chat is invalid. Check the source quotes before saving the work document again.")
         }
         if let charts = savedChartAnalyses,
            !charts.allSatisfy({ SavedChartAnalysis.validate($0, pageCount: pages.count) }) {
-            throw AppError(message: "Een bewaarde diagramuitleg of bronafbeelding is ongeldig. Controleer het diagram voordat je het werkdocument opnieuw bewaart.")
+            throw AppError(message: "A saved chart explanation or source image is invalid. Check the chart before saving the work document again.")
         }
         if let summaries = savedSelectionSummaries, !summaries.allSatisfy({ SavedSelectionSummary.validate($0, pageCount: pages.count) }) {
-            throw AppError(message: "De selectiesamenvatting kon niet volledig worden bewaard. Controleer de bewaarde tekst en bronpagina’s.")
+            throw AppError(message: "The selection summary could not be saved completely. Check the saved text and source pages.")
         }
         var safeCopy = self
         safeCopy.committeeReviews = safeCopy.committeeReviews.map { Self.validCommitteeReviews($0, pages: safeCopy.pages) }
         let data = try JSONEncoder().encode(safeCopy)
-        guard data.count <= 250_000_000 else { throw AppError(message: "Dit werkdocument is te groot om te bewaren.") }
+        guard data.count <= 250_000_000 else { throw AppError(message: "This work document is too large to save.") }
         try data.write(to: url, options: .atomic)
     }
 }

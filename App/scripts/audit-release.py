@@ -1,10 +1,29 @@
 """Check the app bundle for identity, sandboxing, private paths and old branding."""
-import plistlib,re,subprocess,sys
+import plistlib,re,struct,subprocess,sys,tempfile
 from pathlib import Path
 app=Path(sys.argv[1]); failures=[]
 with (app/'Contents/Info.plist').open('rb') as f: info=plistlib.load(f)
-for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'2','LSMinimumSystemVersion':'26.0'}.items():
+for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'3','LSMinimumSystemVersion':'26.0'}.items():
     if info.get(key)!=value: failures.append(f'Incorrect {key}')
+resources=app/'Contents/Resources'
+if info.get('CFBundleIconFile')!='Foliance': failures.append('Bundle icon file must select Foliance.icns')
+for key in ('CFBundleIconName','CFBundleIcons','CFBundleIcons~mac'):
+    if key in info: failures.append(f'Unexpected alternate bundle icon selector: {key}')
+if not (resources/'Foliance.icns').is_file(): failures.append('Declared Foliance.icns bundle icon is missing')
+catalog=resources/'Assets.car'
+if not catalog.is_file() or not (resources/'AppIcon.icns').is_file():
+    failures.append('Compiled AppIcon catalog is missing')
+else:
+    try:
+        with tempfile.TemporaryDirectory(prefix='foliance-icon-audit-') as directory:
+            iconset=Path(directory)/'AppIcon.iconset'
+            subprocess.run(['iconutil','-c','iconset','-o',str(iconset),str(catalog),'AppIcon'],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            icon=iconset/'icon_512x512@2x.png'
+            header=icon.read_bytes()[:24]
+            if len(header)<24 or header[:8]!=b'\x89PNG\r\n\x1a\n' or struct.unpack('>II',header[16:24])!=(1024,1024):
+                failures.append('Compiled AppIcon catalog must retain its 1024 x 1024 store image')
+    except (OSError,subprocess.CalledProcessError) as error:
+        failures.append(f'Could not validate the 1024 x 1024 AppIcon catalog image: {error}')
 with (app/'Contents/Resources/PrivacyInfo.xcprivacy').open('rb') as f: privacy=plistlib.load(f)
 if privacy.get('NSPrivacyTracking'): failures.append('Unexpected tracking declaration')
 content_types=privacy.get('NSPrivacyCollectedDataTypes',[])
@@ -24,4 +43,4 @@ for p in app.rglob('*'):
     if re.search(rb'sk-[A-Za-z0-9_-]{24,}',data): failures.append('Possible API credential in '+str(p.relative_to(app)))
 if failures:
     print('\n'.join(failures),file=sys.stderr);sys.exit(1)
-print('Release audit passed: identity, sandbox, outbound networking and loopback OAuth callback, privacy manifest, no old branding/private paths/API keys.')
+print('Release audit passed: identity, Foliance bundle icon and 1024-pixel AppIcon catalog, sandbox, outbound networking and loopback OAuth callback, privacy manifest, no old branding/private paths/API keys.')

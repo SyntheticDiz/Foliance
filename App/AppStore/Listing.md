@@ -33,8 +33,8 @@ Confirm these draft answers against the final implementation and current App Sto
 
 ## Publisher inputs still required
 
-- App Store Connect app record and verified bundle identifier app.foliance.mac.
-- Application/installer distribution certificates and App Store provisioning profile for the locally configured Apple Developer team.
+- App Store Connect app record. The explicit bundle identifier app.foliance.mac is registered.
+- Signing setup is complete locally: valid application/installer distribution certificates and a matching App Store provisioning profile. Keep this material outside public source.
 - Public support: https://syntheticdiz.github.io/Foliance/support.html (live).
 - Public privacy policy: https://syntheticdiz.github.io/Foliance/privacy.html (live).
 - Rights ownership, seller/copyright details, availability, price and age-rating answers.

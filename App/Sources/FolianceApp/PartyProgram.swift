@@ -77,7 +77,7 @@ struct PartyProgramSettings: View {
                 HStack {
                     Button(UIStrings.text(program == nil ? "Add PDF…" : "Replace PDF…")) { choosing = true }.disabled(busy)
                     if program != nil {
-                        Button(UIStrings.text("Verwijder"), role: .destructive) {
+                        Button("Remove", role: .destructive) {
                             do { try FileManager.default.removeItem(at: PartyProgram.storageURL); program = nil; criteria = ""; message = "Deleted. Start a new analysis to refresh reference comparisons." }
                             catch { message = error.localizedDescription }
                         }.disabled(busy)

@@ -45,7 +45,7 @@ struct ExportOptionsView: View {
     @State private var presentationTask: Task<Void, Never>?
     private var defaultFileName: String {
         let original = (workspace.document?.name as NSString?)?.deletingPathExtension ?? "Foliance"
-        return original + "-SAMENVATTING"
+        return original + "-OVERVIEW"
     }
     private var selected: [Insight] { currentPresentation?.selectedInsights ?? [] }
     private var currentPresentation: ExportPresentationSnapshot? {
@@ -61,7 +61,7 @@ struct ExportOptionsView: View {
     }
     private var content: ScopedExportContent {
         currentPresentation?.content ?? ScopedExportContent(insights: [], chosenPassages: [], summary: nil,
-                                                            summaryScope: "Hele document", tables: [], glossary: [],
+                                                            summaryScope: "Entire document", tables: [], glossary: [],
                                                             notice: "", context: "", neutralAnalysis: false)
     }
     private var eligibleCommitteePurposes: [MeetingPurpose] {
@@ -73,9 +73,9 @@ struct ExportOptionsView: View {
     }
     private var scopeTitle: String {
         switch scopeChoice {
-        case .fullDocument: UIStrings.text("Hele document")
-        case .mySelection: UIStrings.text("Mijn selectie")
-        case .committee(let rawValue): UIStrings.text("Leesprofiel: \(eligibleCommitteePurposes.first { $0.rawValue == rawValue }?.title ?? rawValue)")
+        case .fullDocument: UIStrings.text("Entire document")
+        case .mySelection: UIStrings.text("My selection")
+        case .committee(let rawValue): "Profile: \(eligibleCommitteePurposes.first { $0.rawValue == rawValue }?.title ?? rawValue)"
         }
     }
     private var committeeScopeUnavailable: Bool {
@@ -96,56 +96,73 @@ struct ExportOptionsView: View {
         let c = effective
         return ExportSectionOrder.confirmation.compactMap { section in
             switch section {
-            case .summary: c.summary ? "Documentsamenvatting" : nil
-            case .chosenPassages: c.chosenPassages ? "Zelf gekozen en bronpassages (\(content.chosenPassages.count))" : nil
-            case .pagePoints: c.pagePoints ? (c.committeePurpose.map { "\($0.title): beoordeelde punten (\(points.count))" } ?? (c.selectedPoints ? "Mijn selectie (\(points.count))" : "Gegroepeerde samenvattingspunten (\(points.count))")) : nil
-            case .tables: c.tables ? "Tabellen uitgelegd (\(content.tables.count))" : nil
-            case .politics: c.politics ? "Referentievergelijking" : nil
-            case .questions: c.questions ? "Vragen om uit te zoeken bij \(questions.count) punten" : nil
-            case .notes: c.notes ? "Eigen notities en controlemarkeringen (\(noteCount))" : nil
-            case .glossary: c.glossary ? "Afkortingen en definities (\(content.glossary.count))" : nil
-            case .sources: c.sources ? "Bronnenbijlage" : nil
+            case .summary: c.summary ? "Document overview" : nil
+            case .chosenPassages: c.chosenPassages ? "Selected passages and sources (\(content.chosenPassages.count))" : nil
+            case .pagePoints: c.pagePoints ? (c.committeePurpose.map { "\($0.title): assessed findings (\(points.count))" } ?? (c.selectedPoints ? "My selection (\(points.count))" : "Grouped findings (\(points.count))")) : nil
+            case .tables: c.tables ? "Table explanations (\(content.tables.count))" : nil
+            case .politics: c.politics ? "Reference comparison" : nil
+            case .questions: c.questions ? "Follow-up questions for \(questions.count) findings" : nil
+            case .notes: c.notes ? "Your notes and review marks (\(noteCount))" : nil
+            case .glossary: c.glossary ? "Abbreviations and definitions (\(content.glossary.count))" : nil
+            case .sources: c.sources ? "Source appendix" : nil
             }
         }
     }
     private var scopeDescription: String {
-        if let preset { return UIStrings.text(preset.scopeDescription) }
-        guard currentPresentation != nil else { return UIStrings.text("Export voorbereiden…") }
+        if let preset { return presetDescription(preset) }
+        guard currentPresentation != nil else { return "Preparing export…" }
         let c = effective
         if let purpose = c.committeePurpose {
-            let general = [c.summary ? "documentsamenvatting" : nil,
-                           c.tables ? "tabellen" : nil,
-                           c.glossary ? "afkortingen en definities" : nil].compactMap { $0 }
-            let generalNote = general.isEmpty ? "" : " Algemene onderdelen blijven documentbreed: " + general.joined(separator: ", ") + "."
-            return "Leesprofiel: \(purpose.title). De export bevat beschikbare beoordelingen, veilig gekoppelde punten en herkenbaar onzekere of onbeoordeelde passages. Niet veilig gekoppelde punten worden apart gemarkeerd.\(generalNote)"
+            let general = [c.summary ? "document overview" : nil,
+                           c.tables ? "tables" : nil,
+                           c.glossary ? "abbreviations and definitions" : nil].compactMap { $0 }
+            let generalNote = general.isEmpty ? "" : " General sections apply to the whole document: " + general.joined(separator: ", ") + "."
+            return "Profile: \(purpose.title). The export includes available assessments, safely linked findings, and clearly marked uncertain or unassessed passages. Findings that cannot be linked safely are marked separately.\(generalNote)"
         }
         let included = ExportSectionOrder.confirmation.compactMap { section -> String? in
             switch section {
-            case .summary: c.summary ? UIStrings.text("documentsamenvatting") + " (\(content.summaryScope))" : nil
-            case .chosenPassages: c.chosenPassages ? UIStrings.text("zelf gekozen passages") + " (\(content.chosenPassages.count))" : nil
-            case .pagePoints: c.pagePoints ? UIStrings.text(c.committeePurpose.map { "Leesprofiel \($0.title): beoordeelde punten" } ?? (c.selectedPoints ? "Mijn selectie in gekozen volgorde" : "alle punten")) + " (\(points.count))" : nil
-            case .tables: c.tables ? UIStrings.text("tabellen") + " (\(content.tables.count))" : nil
-            case .politics: c.politics ? UIStrings.text("referentievergelijking") : nil
-            case .questions: c.questions ? UIStrings.text(c.selectedQuestions ? "vragen bij gemarkeerde punten" : "alle beschikbare vragen") + " (\(questions.count))" : nil
-            case .notes: c.notes ? UIStrings.text("notities en controlemarkeringen") + " (\(noteCount))" : nil
-            case .glossary: c.glossary ? UIStrings.text("afkortingen en definities") + " (\(content.glossary.count))" : nil
-            case .sources: c.sources ? UIStrings.text("bronpassages bij opgenomen punten, duiding en vragen") : nil
+            case .summary: c.summary ? UIStrings.text("document summary") + " (\(content.summaryScope))" : nil
+            case .chosenPassages: c.chosenPassages ? UIStrings.text("passages chosen by you") + " (\(content.chosenPassages.count))" : nil
+            case .pagePoints: c.pagePoints ? (c.committeePurpose.map { "\($0.title): assessed findings" } ?? (c.selectedPoints ? "My selection in chosen order" : "All findings")) + " (\(points.count))" : nil
+            case .tables: c.tables ? UIStrings.text("tables") + " (\(content.tables.count))" : nil
+            case .politics: c.politics ? "Reference comparison" : nil
+            case .questions: c.questions ? (c.selectedQuestions ? "Questions for selected findings" : "All available questions") + " (\(questions.count))" : nil
+            case .notes: c.notes ? UIStrings.text("notes and review marks") + " (\(noteCount))" : nil
+            case .glossary: c.glossary ? UIStrings.text("abbreviations and definitions") + " (\(content.glossary.count))" : nil
+            case .sources: c.sources ? UIStrings.text("source excerpts for included findings, analysis, and questions") : nil
             }
         }
-        return included.isEmpty ? UIStrings.text("Geen beschikbare onderdelen geselecteerd.") : UIStrings.text("Bereik: ") + included.joined(separator: "; ") + "."
+        return included.isEmpty ? "No available sections selected." : "Scope: " + included.joined(separator: "; ") + "."
+    }
+    private func presetTitle(_ preset: ExportPreset) -> String {
+        switch preset {
+        case .shortOverview: "Brief overview"
+        case .selectedWithSources: "My selection with sources"
+        case .fullDossier: "Full report"
+        }
+    }
+    private func presetDescription(_ preset: ExportPreset) -> String {
+        switch preset {
+        case .shortOverview:
+            "The document overview and passages you selected. Excludes findings, questions, tables, finding notes, and the source appendix."
+        case .selectedWithSources:
+            "Your selected findings and their available questions, with source passages, plus the passages you selected. Excludes the document overview, tables, reference comparison, abbreviations, and notes."
+        case .fullDossier:
+            "All available results within their stated page ranges, including findings, comparison, and questions. Your selected passages, tables, abbreviations, and notes cover the whole document; available source passages are included."
+        }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(UIStrings.text("PDF exporteren")).font(.title2.bold())
-            FocusMenuPicker(UIStrings.text("Exportbereik"), selection: scopeBinding, selectedTitle: scopeTitle) {
-                Text(UIStrings.text("Hele document")).tag(ExportScopeChoice.fullDocument)
-                Text(UIStrings.text("Mijn selectie")).tag(ExportScopeChoice.mySelection)
+            Text(UIStrings.text("Export PDF")).font(.title2.bold())
+            FocusMenuPicker(UIStrings.text("Export scope"), selection: scopeBinding, selectedTitle: scopeTitle) {
+                Text(UIStrings.text("Entire document")).tag(ExportScopeChoice.fullDocument)
+                Text(UIStrings.text("My selection")).tag(ExportScopeChoice.mySelection)
                 ForEach(eligibleCommitteePurposes, id: \.self) { purpose in
-                    Text(UIStrings.text("Leesprofiel: \(purpose.title)")).tag(ExportScopeChoice.committee(purpose.rawValue))
+                    Text("Profile: \(purpose.title)").tag(ExportScopeChoice.committee(purpose.rawValue))
                 }
             }
             HStack {
-                ForEach(Array(["Naam en titel", "Inhoud", "Controleren"].enumerated()), id: \.offset) { index, label in
+                ForEach(Array(["Title", "Content", "Review"].enumerated()), id: \.offset) { index, label in
                     Text("\(index + 1). " + UIStrings.text(label)).font(.subheadline.weight(step == index ? .semibold : .regular))
                         .foregroundStyle(step == index ? Color.primary : Color.secondary)
                     if index < 2 { Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary) }
@@ -156,92 +173,92 @@ struct ExportOptionsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if step == 0 {
-                        Picker(UIStrings.text("Voorinstelling"), selection: $preset) {
-                            Text(UIStrings.text("Aangepast")).tag(ExportPreset?.none)
-                            ForEach(ExportPreset.allCases) { option in Text(UIStrings.text(option.title)).tag(Optional(option)) }
+                        Picker("Preset", selection: $preset) {
+                            Text(UIStrings.text("Custom")).tag(ExportPreset?.none)
+                            ForEach(ExportPreset.allCases) { option in Text(presetTitle(option)).tag(Optional(option)) }
                         }.pickerStyle(.radioGroup).onChange(of: preset) { _, value in
                             if let value {
                                 choices = value.configuration()
                                 customizationExpanded = false
                             } else {
-                                // “Aangepast” exposes the saved choices without replacing them.
+                                // Custom exposes the saved choices without replacing them.
                                 customizationExpanded = true
                             }
                         }
-                        Text(UIStrings.text(preset?.scopeDescription ?? "Kies een voorinstelling of stel de exportonderdelen zelf in."))
+                        Text(preset.map(presetDescription) ?? "Choose a preset or customize the export sections.")
                             .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                        Text(UIStrings.text("Deze titel komt bovenaan de export-PDF.")).foregroundStyle(.secondary)
-                        TextField(UIStrings.text("Titel"), text: $title).textFieldStyle(FocusInputFieldStyle()).tutorialTarget("exportTitle")
-                        Toggle(UIStrings.text("Andere bestandsnaam gebruiken"), isOn: $separateName)
-                        if separateName { TextField(UIStrings.text("Bestandsnaam"), text: $fileName).textFieldStyle(FocusInputFieldStyle()) }
-                        Text(UIStrings.text("Bestand: ") + ExportConfiguration.fileName(separateName ? fileName : defaultFileName)).font(.caption).foregroundStyle(.secondary)
+                        Text(UIStrings.text("This title appears at the top of the exported PDF.")).foregroundStyle(.secondary)
+                        TextField(UIStrings.text("Title"), text: $title).textFieldStyle(FocusInputFieldStyle()).tutorialTarget("exportTitle")
+                        Toggle(UIStrings.text("Use a different filename"), isOn: $separateName)
+                        if separateName { TextField(UIStrings.text("Filename"), text: $fileName).textFieldStyle(FocusInputFieldStyle()) }
+                        Text(UIStrings.text("File: ") + ExportConfiguration.fileName(separateName ? fileName : defaultFileName)).font(.caption).foregroundStyle(.secondary)
                     } else if step == 1 {
                         Text(scopeDescription).font(.callout).textSelection(.enabled)
                         if !sections.isEmpty {
-                            Text(UIStrings.text("Gekozen onderdelen")).font(.subheadline.weight(.semibold))
+                            Text(UIStrings.text("Selected sections")).font(.subheadline.weight(.semibold))
                             ForEach(sections, id: \.self) { Label(UIStrings.text($0), systemImage: "checkmark.circle") }
                         }
                         DisclosureGroup(isExpanded: $customizationExpanded) {
                         VStack(alignment: .leading, spacing: 14) {
-                        section("Zelf gekozen en volledige bronpassages", enabled: !requestedContent.chosenPassages.isEmpty, selection: $choices.chosenPassages,
-                                detail: choices.committeePurpose == nil ? "De volledige tekst die je zelf koos, met bronpagina’s en je eigen toelichting. Ook beschikbaar zonder AI-analyse." : "Je gekozen passages en volledige passages van de gerichte beoordeling zonder veilig gekoppeld punt.")
-                        section("Documentsamenvatting", enabled: currentPresentation?.requestedContent.summary != nil, selection: $choices.summary, detail: "De algemene samenvatting van het document.")
-                        section(choices.selectedPoints ? "Mijn selectie" : "Gegroepeerde samenvattingspunten", enabled: !(choices.selectedPoints ? selected : availableInsights).isEmpty, selection: $choices.pagePoints, detail: choices.selectedPoints ? "In jouw volgorde, met de huidige vergaderstatus en bronverwijzingen." : "Per hoofdstuk of onderwerp, met verwijzingen naar de fysieke PDF-pagina’s.")
+                        section("Selected passages and full source text", enabled: !requestedContent.chosenPassages.isEmpty, selection: $choices.chosenPassages,
+                                detail: choices.committeePurpose == nil ? "The full text you selected, with source pages and your notes. Available without AI analysis." : "Your selected passages and full passages from the profile review that could not be safely linked to a finding.")
+                        section("Document overview", enabled: currentPresentation?.requestedContent.summary != nil, selection: $choices.summary, detail: "The general overview of the document.")
+                        section(choices.selectedPoints ? "My selection" : "Grouped findings", enabled: !(choices.selectedPoints ? selected : availableInsights).isEmpty, selection: $choices.pagePoints, detail: choices.selectedPoints ? "In your chosen order, with review status and source references." : "Grouped by section or topic, with physical PDF page references.")
                         if choices.pagePoints && !availableInsights.isEmpty && choices.committeePurpose == nil {
-                            FocusChoiceTabs(UIStrings.text("Punten"), selection: $choices.selectedPoints, options: [
-                                .init(value: false, title: UIStrings.text("Alle punten")),
-                                .init(value: true, title: UIStrings.text("Mijn selectie"), count: selected.count)
+                            FocusChoiceTabs(UIStrings.text("Points"), selection: $choices.selectedPoints, options: [
+                                .init(value: false, title: UIStrings.text("All points")),
+                                .init(value: true, title: UIStrings.text("My selection"), count: selected.count)
                             ])
                                 .onChange(of: choices.selectedPoints) { _, _ in preset = nil }
-                            if choices.selectedPoints && selected.isEmpty { Text(UIStrings.text("Je hebt nog geen punten geselecteerd.")).font(.caption).foregroundStyle(.secondary) }
+                            if choices.selectedPoints && selected.isEmpty { Text(UIStrings.text("You have not selected any findings yet.")).font(.caption).foregroundStyle(.secondary) }
                         }
-                        section("Tabeluitleg", enabled: !(currentPresentation?.requestedContent.tables.isEmpty ?? true), selection: $choices.tables, detail: "Uitleg, berekende verschillen en bronpagina’s van herkende tabellen.")
-                        section("Referentievergelijking", enabled: currentPresentation?.hasPoliticalInsights == true, selection: $choices.politics, detail: "Vergelijkingsresultaten met het referentiedocument, met bronverwijzingen.")
-                        section("Vragen om uit te zoeken", enabled: currentPresentation?.hasQuestions == true, selection: $choices.questions, detail: "Inclusief vragen die je bij passages hebt laten maken.")
+                        section("Table explanations", enabled: !(currentPresentation?.requestedContent.tables.isEmpty ?? true), selection: $choices.tables, detail: "Explanations, calculated differences, and source pages for recognized tables.")
+                        section("Reference comparison", enabled: currentPresentation?.hasPoliticalInsights == true, selection: $choices.politics, detail: "Comparison findings linked to the reference document, with source references.")
+                        section("Questions to resolve", enabled: currentPresentation?.hasQuestions == true, selection: $choices.questions, detail: "Includes questions created for passages.")
                         if choices.questions && currentPresentation?.hasQuestions == true {
-                            FocusChoiceTabs(UIStrings.text("Vragen"), selection: $choices.selectedQuestions, options: [
-                                .init(value: false, title: UIStrings.text("Alle vragen")),
-                                .init(value: true, title: UIStrings.text("Bij mijn selectie"))
+                            FocusChoiceTabs(UIStrings.text("Questions"), selection: $choices.selectedQuestions, options: [
+                                .init(value: false, title: UIStrings.text("All questions")),
+                                .init(value: true, title: UIStrings.text("For my selection"))
                             ])
                                 .onChange(of: choices.selectedQuestions) { _, _ in preset = nil }
-                            if choices.selectedQuestions && questions.isEmpty { Text(UIStrings.text("Je selectie bevat geen vragen om uit te zoeken.")).font(.caption).foregroundStyle(.secondary) }
+                            if choices.selectedQuestions && questions.isEmpty { Text(UIStrings.text("Your selection contains no questions to resolve.")).font(.caption).foregroundStyle(.secondary) }
                         }
-                        section("Afkortingen en definities", enabled: !glossary.isEmpty, selection: $choices.glossary, detail: "Inclusief eigen definities en herkomst van de betekenis.")
+                        section("Abbreviations and definitions", enabled: !glossary.isEmpty, selection: $choices.glossary, detail: "Includes your definitions and the source of each meaning.")
                         if let glossaryError { Text(glossaryError).font(.caption).foregroundStyle(.orange) }
-                        section("Eigen notities en controlemarkeringen", enabled: noteCount > 0, selection: $choices.notes, detail: choices.selectedPoints ? "Notities bij gemarkeerde punten." : "Je notities en controlemarkeringen bij punten.")
-                        section("Volledige bronpassages als bijlage", enabled: effective.pagePoints || effective.politics || effective.questions, selection: $choices.sources, detail: "Alleen de bronnen bij de gekozen punten, duiding en vragen.")
+                        section("Your notes and review marks", enabled: noteCount > 0, selection: $choices.notes, detail: choices.selectedPoints ? "Notes on selected findings." : "Your notes and review marks on findings.")
+                        section("Full source passages as an appendix", enabled: effective.pagePoints || effective.politics || effective.questions, selection: $choices.sources, detail: "Only sources for the included findings, comparison, and questions.")
                         }
                         } label: {
-                            Text(UIStrings.text("Inhoud aanpassen")).font(.headline)
+                            Text(UIStrings.text("Customize contents")).font(.headline)
                         }
                     } else {
                         Text(title.trimmingCharacters(in: .whitespacesAndNewlines)).font(.title3.bold())
                         Text(ExportConfiguration.fileName(separateName ? fileName : defaultFileName)).foregroundStyle(.secondary)
                         Text(scopeDescription).font(.callout).textSelection(.enabled)
                         ForEach(sections, id: \.self) { Label(UIStrings.text($0), systemImage: "checkmark.circle") }
-                        Text(UIStrings.text("Bereik samenvatting: ") + UIStrings.text(content.summaryScope) + "\n" + UIStrings.text(choices.committeePurpose.map { "Leesprofiel \($0.title)" } ?? currentPresentation?.analysisScope ?? "Hele document")).font(.caption).foregroundStyle(.secondary)
-                        Text(UIStrings.text("Voorbeeld van de PDF-export. De voorvertoning wordt lokaal gemaakt en slaat niets op.")).font(.caption).foregroundStyle(.secondary)
-                        if previewBusy { HStack { ProgressView().controlSize(.small); Text(UIStrings.text("Voorbeeld maken…")) }.frame(maxWidth: .infinity, minHeight: 260) }
-                        else if let previewError { Label(UIStrings.text("Voorbeeld niet beschikbaar: ") + previewError, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).textSelection(.enabled) }
+                        Text("Summary scope: " + content.summaryScope + "\n" + (choices.committeePurpose.map { "Profile: \($0.title)" } ?? currentPresentation?.analysisScope ?? "Entire document")).font(.caption).foregroundStyle(.secondary)
+                        Text(UIStrings.text("PDF export preview. The preview is created locally and does not save anything.")).font(.caption).foregroundStyle(.secondary)
+                        if previewBusy { HStack { ProgressView().controlSize(.small); Text(UIStrings.text("Creating preview…")) }.frame(maxWidth: .infinity, minHeight: 260) }
+                        else if let previewError { Label(UIStrings.text("Preview unavailable: ") + previewError, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).textSelection(.enabled) }
                         else if let previewData { ExportPDFPreview(data: previewData).frame(minHeight: 300).clipShape(RoundedRectangle(cornerRadius: 8)) }
                     }
                     if step > 0 && sections.isEmpty {
-                        Label(UIStrings.text("Kies ten minste één beschikbaar onderdeel. Bewaar eerst punten met de ster als je Mijn selectie wilt exporteren."), systemImage: "info.circle").font(.callout)
+                        Label(UIStrings.text("Choose at least one available section. Save findings with the star before exporting My selection."), systemImage: "info.circle").font(.callout)
                     }
                     if choices.committeePurpose != nil && committeeScopeUnavailable {
-                        Label(UIStrings.text("Voor dit leesprofiel is geen actuele, bronvalide beoordeling beschikbaar. Kies een andere exportscope."), systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
+                        Label(UIStrings.text("No current, source-validated review is available for this reading profile. Choose another export scope."), systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.orange)
                     }
-                    if !content.notice.isEmpty { Label(UIStrings.text("De analyse is onvolledig. Deze melding wordt ook opgenomen in de export.\n") + content.notice, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange) }
+                    if !content.notice.isEmpty { Label(UIStrings.text("Analysis is incomplete. This notice is also included in the export.\n") + content.notice, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.orange) }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
                     .background(.background, in: RoundedRectangle(cornerRadius: 16))
             }.id(step).transition(stepTransition)
             }.frame(maxHeight: .infinity, alignment: .topLeading).clipped()
             Divider()
             HStack {
-                Button(UIStrings.text("Annuleren")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(UIStrings.text("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(UIStrings.text("Terug")) { changeStep(by: -1) }.disabled(step == 0).opacity(step == 0 ? 0 : 1).accessibilityHidden(step == 0)
-                Button(UIStrings.text(step == 2 ? "Opslaan als PDF…" : "Volgende")) {
+                Button(UIStrings.text("Back")) { changeStep(by: -1) }.disabled(step == 0).opacity(step == 0 ? 0 : 1).accessibilityHidden(step == 0)
+                Button(step == 2 ? "Save as PDF…" : "Next") {
                     if step < 2 { changeStep(by: 1) } else if let currentPresentation {
                         choices.save()
                         let config = currentPresentation.effective, heading = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -305,7 +322,7 @@ struct ExportOptionsView: View {
                 customizationExpanded = preset == nil
                 if let document = workspace.document {
                     do { glossary = try ExportGlossaryItem.load(document: document) }
-                    catch { glossaryError = "De afkortingenlijst kon niet worden geladen: " + error.localizedDescription }
+                    catch { glossaryError = "Could not load the abbreviation list: " + error.localizedDescription }
                 }
                 glossaryRevision = UUID()
                 refreshCommitteeScopeEligibility()
@@ -317,8 +334,8 @@ struct ExportOptionsView: View {
     private func section(_ title: String, enabled: Bool, selection: Binding<Bool>, detail: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(UIStrings.text(title), isOn: Binding(get: { enabled && selection.wrappedValue }, set: { selection.wrappedValue = $0; preset = nil })).disabled(!enabled)
-                .tutorialTarget(title == "Documentsamenvatting" ? "exportSection" : "section-\(title)")
-            Text(UIStrings.text(enabled ? detail : "Niet beschikbaar voor dit document of deze selectie.")).font(.caption).foregroundStyle(.secondary)
+                .tutorialTarget(title == "Document overview" ? "exportSection" : "section-\(title)")
+            Text(enabled ? detail : "Not available for this document or selection.").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -467,7 +484,7 @@ struct ExportOptionsView: View {
         guard let presentation = currentPresentation, let document = presentation.document else {
             previewBusy = false
             if currentPresentation == nil { refreshPresentation() }
-            else { previewError = "Geen document beschikbaar." }
+            else { previewError = "No document is available." }
             return
         }
         let configuration = presentation.effective

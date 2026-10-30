@@ -72,8 +72,8 @@ enum KeyPointService {
             try Task.checkCancellation()
             guard let candidate = group.first else { continue }
             if candidate.quote.utf8.count > requestLimit {
-                points += group.map { unassessed($0, notice: "Niet automatisch beoordeeld: deze alinea is te lang om veilig in één keer te beoordelen. Controleer de volledige bron.") }
-                issues.append(issue(for: candidate, detail: "De volledige alinea overschrijdt de invoergrens van \(requestLimit) UTF-8-bytes."))
+                points += group.map { unassessed($0, notice: "Not assessed automatically: this paragraph is too long to assess safely in one request. Check the complete source.") }
+                issues.append(issue(for: candidate, detail: "The complete paragraph exceeds the input limit of \(requestLimit) UTF-8 bytes."))
             } else {
                 do {
                     let operation = { try await assess(candidate, model: actualModel, request: request) }
@@ -85,7 +85,7 @@ enum KeyPointService {
                     try Task.checkCancellation()
                     if error is CancellationError { throw error }
                     if error is ChatGPTError { throw error }
-                    points += group.map { unassessed($0, notice: "Niet automatisch beoordeeld: de automatische beoordeling is mislukt. Controleer de volledige alinea in de bron.") }
+                    points += group.map { unassessed($0, notice: "Not assessed automatically: the automated assessment failed. Check the complete paragraph in the source.") }
                     issues.append(issue(for: candidate, detail: error.localizedDescription))
                 }
             }
@@ -136,11 +136,11 @@ enum KeyPointService {
         }) { _, result in
             if result.overlong {
                 let candidate = result.candidates[0]
-                points += result.candidates.map { unassessed($0, notice: "Niet automatisch beoordeeld: deze alinea is te lang om veilig in één keer te beoordelen. Controleer de volledige bron.") }
-                issues.append(issue(for: candidate, detail: "De volledige alinea overschrijdt de invoergrens van \(chatGPTPassageLimit) UTF-8-bytes."))
+                points += result.candidates.map { unassessed($0, notice: "Not assessed automatically: this paragraph is too long to assess safely in one request. Check the complete source.") }
+                issues.append(issue(for: candidate, detail: "The complete paragraph exceeds the input limit of \(chatGPTPassageLimit) UTF-8 bytes."))
             } else if let issueText = result.issue {
                 let candidate = result.candidates[0]
-                points += result.candidates.map { unassessed($0, notice: "Niet automatisch beoordeeld: de automatische beoordeling is mislukt. Controleer de volledige alinea in de bron.") }
+                points += result.candidates.map { unassessed($0, notice: "Not assessed automatically: the automated assessment failed. Check the complete paragraph in the source.") }
                 issues.append(issue(for: candidate, detail: issueText))
             } else if let decision = result.decision, decision.relevant {
                 points += result.candidates.map { applying(decision, to: $0) }

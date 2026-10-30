@@ -66,8 +66,8 @@ struct AnalysisProgress {
     func activity(now: Date = Date()) -> String {
         let elapsed = max(0, Int(now.timeIntervalSince(started)))
         let duration = "\(elapsed / 60):" + String(format: "%02d", elapsed % 60)
-        let count = phaseTotal > 0 ? "\(phaseCompleted) van \(phaseTotal) \(isMergingSummary ? "samenvoegingen" : "stappen") gereed · " : ""
-        return count + "Verstreken \(duration) · " + (phaseTotal > 0 && phaseCompleted >= phaseTotal ? "Afronden…" : "Bezig; wachten op of verwerken van antwoord…")
+        let count = phaseTotal > 0 ? "\(phaseCompleted) of \(phaseTotal) \(isMergingSummary ? "merges" : "steps") complete · " : ""
+        return count + "Elapsed \(duration) · " + (phaseTotal > 0 && phaseCompleted >= phaseTotal ? "Finishing…" : "Waiting for or processing a response…")
     }
     var percent: Int { min(99, max(0, Int(fraction * 100))) }
     func remaining(now: Date = Date()) -> String {
@@ -76,11 +76,11 @@ struct AnalysisProgress {
             ? completionUpdates >= 3 && elapsed >= 15
             : samples >= 2 && elapsed >= 3
         guard warmedUp, phaseCompleted > 0, phaseTotal > phaseCompleted else {
-            return phaseTotal > 0 && phaseCompleted >= phaseTotal ? "Deze fase wordt afgerond…" : "Resterende tijd voor deze fase berekenen…"
+            return phaseTotal > 0 && phaseCompleted >= phaseTotal ? "Finishing this phase…" : "Estimating time remaining for this phase…"
         }
         let seconds = max(1, elapsed / Double(phaseCompleted) * Double(phaseTotal - phaseCompleted))
-        if seconds < 60 { return "Deze fase: nog ongeveer minder dan een minuut" }
-        return "Deze fase: nog ongeveer \(Int(ceil(seconds / 60))) min"
+        if seconds < 60 { return "This phase: less than a minute remaining" }
+        return "This phase: about \(Int(ceil(seconds / 60))) min remaining"
     }
     mutating func resetChatGPTEstimateForCancellation(now: Date = Date()) {
         guard requiresConservativeChatGPTETA else { return }

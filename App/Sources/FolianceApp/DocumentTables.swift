@@ -18,21 +18,25 @@ struct DocumentTable: Identifiable, Codable, Sendable {
         return subject
     }
     var overview: String {
-        if recognizedWithOCR == true { return "Met lokale OCR zijn \(rows.count) rijen en \(headers.count) kolommen herkend. Dit kunnen ook tussenkoppen en totaalregels zijn. Controleer de herkende cellen aan de bron." }
-        return "Deze tabel bevat \(rows.count) gegevensrijen, inclusief eventuele tussenstanden en totalen. Kolommen: \(headers.dropFirst().joined(separator: ", "))." + (reliable ? " Hieronder staan de belangrijkste leespunten." : " De structuur is niet voldoende zeker voor automatische cijfervergelijkingen.")
+        let rowLabel = rows.count == 1 ? "row" : "rows"
+        let columnLabel = headers.count == 1 ? "column" : "columns"
+        if recognizedWithOCR == true {
+            return "Local OCR recognized \(rows.count) \(rowLabel) and \(headers.count) \(columnLabel). These may include section headings and total rows. Check the recognized cells against the source."
+        }
+        return "This table contains \(rows.count) data \(rowLabel), including any subtotals and totals. Columns: \(headers.dropFirst().joined(separator: ", "))." + (reliable ? " Key reading points follow." : " The structure is not reliable enough for automatic numeric comparisons.")
     }
     var bullets: [String] {
-        guard reliable else { return ["Bekijk de oorspronkelijke tabel om de samenhang tussen de cijfers en kolommen te controleren."] }
+        guard reliable else { return ["Check the original table to verify how the figures relate to the columns."] }
         let years = headers.indices.filter { headers[$0].range(of: #"^(?:19|20)\d{2}$"#, options: .regularExpression) != nil }
         var result: [String] = []
         if years.count >= 2, let first = years.first, let last = years.last, headers[first] < headers[last] {
             if let total = rows.first(where: { $0[0].lowercased().hasPrefix("totaal") }), total.count == headers.count {
                 let values = years.compactMap { column in TableReader.number(total[column]).map { (column, $0) } }
                 if let highest = values.max(by: { $0.1 < $1.1 }), values.count > 2 {
-                    result.append("De hoogste waarde op de totaalregel in de getoonde jaarkolommen is \(total[highest.0]) in \(headers[highest.0]).")
+                    result.append("The highest value in the total row across the displayed year columns is \(total[highest.0]) in \(headers[highest.0]).")
                 }
                 if let structural = headers.firstIndex(where: { $0.lowercased().hasPrefix("struc") }), !total[structural].isEmpty {
-                    result.append("Op de totaalregel staat bij ‘\(headers[structural])’ \(total[structural]). Dit is geen extra jaarbedrag.")
+                    result.append("The total row lists \(total[structural]) under ‘\(headers[structural])’. This is not an additional annual amount.")
                 }
             }
             let ordered = rows.sorted { a, b in
@@ -52,18 +56,18 @@ struct DocumentTable: Identifiable, Codable, Sendable {
                 let difference = b - a
                 let unit: String
                 if row[first].contains("%") {
-                    unit = " procentpunt"
+                    unit = " percentage points"
                 } else if row[first].contains("€") {
-                    unit = " euro"
+                    unit = " euros"
                 } else {
                     unit = amountUnit
                 }
                 let change: String
-                if difference == 0 { change = "blijft gelijk" }
-                else if a < 0 && b < 0 { change = "wordt \(TableReader.format(abs(difference)))\(unit) \(difference > 0 ? "minder negatief" : "negatiever")" }
-                else { change = "\(difference > 0 ? "stijgt" : "daalt") met \(TableReader.format(abs(difference)))\(unit)" }
+                if difference == 0 { change = "remains unchanged" }
+                else if a < 0 && b < 0 { change = "becomes \(TableReader.format(abs(difference)))\(unit) \(difference > 0 ? "less negative" : "more negative")" }
+                else { change = "\(difference > 0 ? "increases" : "decreases") by \(TableReader.format(abs(difference)))\(unit)" }
                 let percent = a > 0 && b >= 0 && !row[first].contains("%") && difference != 0 && !headers.joined().contains("saldoverslechterend") ? " (\(TableReader.format(abs(difference / a * 100)))%)" : ""
-                result.append("\(row[0]): van \(row[first]) in \(headers[first]) naar \(row[last]) in \(headers[last]); \(change)\(percent).")
+                result.append("\(row[0]): from \(row[first]) in \(headers[first]) to \(row[last]) in \(headers[last]); \(change)\(percent).")
             }
         }
         if result.isEmpty {
@@ -71,27 +75,27 @@ struct DocumentTable: Identifiable, Codable, Sendable {
                 result.append(row[0] + ": " + headers.indices.dropFirst().filter { !row[$0].isEmpty }.map { headers[$0] + " = " + row[$0] }.joined(separator: "; ") + ".")
             }
         }
-        if result.count > 5 { return Array(result.prefix(5)) + ["De tabel bevat meer rijen; bekijk de bron voor het volledige overzicht."] }
-        if rows.count > 5 && result.count <= 5 { result.append("De tabel bevat meer rijen; bekijk de bron voor het volledige overzicht.") }
+        if result.count > 5 { return Array(result.prefix(5)) + ["More rows are available; see the source for the complete table."] }
+        if rows.count > 5 && result.count <= 5 { result.append("More rows are available; see the source for the complete table.") }
         return result
     }
     private var amountUnit: String {
         switch Self.moneyScale(in: ([title] + headers + notes).joined(separator: " ")) {
-        case .thousands: return " × € 1.000"
-        case .millions: return " × € 1.000.000"
-        case .euros: return " euro"
-        case .unknown: return " in de eenheid van de tabel"
+        case .thousands: return " × € 1,000"
+        case .millions: return " × € 1,000,000"
+        case .euros: return " euros"
+        case .unknown: return " in the table's units"
         }
     }
     var cautions: [String] {
         var result = notes
-        if headers.joined().contains("saldoverslechterend"), amountUnit == " × € 1.000.000" { result.insert("Volgens de tabelkop zijn de bedragen in miljoenen euro en is een positief bedrag saldoverslechterend. ‘Struc.’ staat apart van de jaarkolommen en wordt niet als extra jaar meegerekend.", at: 0) }
-        result.append("Lege cellen zijn niet als nul geïnterpreteerd. Bedragen tussen haakjes of met onduidelijke notatie worden niet gebruikt voor berekende verschillen.")
-        if !reliable { result.insert("Onzekere tabelherkenning: samengevoegde cellen, ontbrekende koppen of een afwijkende uitlijning kunnen de betekenis veranderen.", at: 0) }
-        if amountUnit == " in de eenheid van de tabel" {
-            result.append("Controleer de eenheid in de bron, bijvoorbeeld euro’s, duizenden euro’s, aantallen of percentages. Er worden geen eenheden omgerekend.")
+        if headers.joined().contains("saldoverslechterend"), amountUnit == " × € 1,000,000" { result.insert("The table heading indicates amounts in millions of euros and treats positive amounts as worsening the balance. ‘Struc.’ appears separately from the year columns and is not counted as an additional year.", at: 0) }
+        result.append("Blank cells were not treated as zero. Parenthesized amounts and values with unclear notation are excluded from calculated differences.")
+        if !reliable { result.insert("Table recognition is uncertain: merged cells, missing headings or unusual alignment may change the meaning.", at: 0) }
+        if amountUnit == " in the table's units" {
+            result.append("Check the units in the source, such as euros, thousands of euros, counts or percentages. Units are not converted.")
         }
-        result.append("Verschillen verklaren geen oorzaak. Controleer ook of bedragen begroot of gerealiseerd zijn en welke voetnoten gelden.")
+        result.append("Differences do not explain their cause. Check whether amounts are budgeted or actual and review any footnotes.")
         return result
     }
 
@@ -185,8 +189,8 @@ enum TableReader {
         return value
     }
     static func format(_ value: Double) -> String {
-        if value != 0 && abs(value) < 0.01 { return value.formatted(.number.locale(Locale(identifier: "nl_NL")).precision(.significantDigits(1...3))) }
-        return value.formatted(.number.locale(Locale(identifier: "nl_NL")).precision(.fractionLength(0...2)))
+        if value != 0 && abs(value) < 0.01 { return value.formatted(.number.locale(Locale(identifier: "en_US")).precision(.significantDigits(1...3))) }
+        return value.formatted(.number.locale(Locale(identifier: "en_US")).precision(.fractionLength(0...2)))
     }
 
     static func extract(data: Data) -> [DocumentTable] {

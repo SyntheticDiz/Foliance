@@ -40,8 +40,8 @@ enum AIService {
                              warning: @escaping @Sendable (Int) async -> Void = { _ in },
                              progress: @escaping @Sendable (Int, Int) async -> Void = { _, _ in },
                              request: Request? = nil) async throws -> [Insight] {
-        guard context.utf8.count <= 1000 else { throw AppError(message: "Beperk aanvullende aandachtspunten voor lokale AI tot ongeveer 1.000 tekens.") }
-        guard let program else { throw AppError(message: "Voeg eerst een referentiedocument toe via Instellingen.") }
+        guard context.utf8.count <= 1000 else { throw AppError(message: "Keep additional reading goals for local analysis within about 1,000 characters.") }
+        guard let program else { throw AppError(message: "Add a reference document in Settings first.") }
         if request == nil { _ = try await AIRouting.resolve(model) }
         if AIConfiguration.isChatGPT(model) {
             return try await ChatGPTProgramAnalysis.analyze(pages: pages, model: model, context: context, program: program, request: request, update: update, warning: warning, progress: progress)

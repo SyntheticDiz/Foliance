@@ -29,19 +29,19 @@ final class FolianceReleaseTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "chatGPTModel"), "gpt-6-astra")
     }
 
-    func testAppIdentityVersionAndPatchNotesAgreeForInitialRelease() throws {
+    func testAppIdentityVersionAndPatchNotesAgree() throws {
         let info = try plist(at: "Config/Info.plist")
         XCTAssertEqual(info["CFBundleIdentifier"] as? String, "app.foliance.mac")
         XCTAssertEqual(info["CFBundleName"] as? String, "Foliance")
         XCTAssertEqual(info["CFBundleDisplayName"] as? String, "Foliance")
         XCTAssertEqual(info["CFBundleShortVersionString"] as? String, "1.0.0")
-        XCTAssertEqual(info["CFBundleVersion"] as? String, "2")
+        XCTAssertEqual(info["CFBundleVersion"] as? String, "3")
         XCTAssertEqual(Set(info["CFBundleLocalizations"] as? [String] ?? []), Set(["en"]))
         XCTAssertEqual(PatchNotesView.version, info["CFBundleShortVersionString"] as? String)
 
         let notes = try String(contentsOf: projectRoot.appendingPathComponent("Sources/FolianceApp/PatchNotesView.swift"), encoding: .utf8)
         XCTAssertTrue(notes.contains("Foliance 1.0.0"))
-        XCTAssertTrue(notes.contains("Release preparation · build 2"))
+        XCTAssertTrue(notes.contains("English interface update · build 3"))
         XCTAssertFalse(notes.contains("5.32."), "The first release must not carry forward predecessor history.")
     }
 

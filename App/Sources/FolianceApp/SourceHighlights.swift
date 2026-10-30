@@ -17,7 +17,7 @@ enum SourceHighlights {
         var id: String { passageID.map { "\(kind.rawValue)-\($0)" } ?? "\(kind.rawValue)-\(page)-\(quote)" }
 
         var readerPoint: Insight {
-            Insight(title: title.isEmpty ? "Bronpassage" : title, summary: "", relevance: "", question: "",
+            Insight(title: title.isEmpty ? "Source passage" : title, summary: "", relevance: "", question: "",
                     quote: quote, page: page, passageSources: passageSources)
         }
     }
@@ -82,9 +82,9 @@ struct SourceHighlightsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(UIStrings.text(sourceBound ? "Kerngegevens uit de bron" : "Concrete bronpassages")).font(.title2.bold())
+            Text(UIStrings.text(sourceBound ? "Key findings from the source" : "Specific source passages")).font(.title2.bold())
             Text(UIStrings.text(workspace.highlightScope)).font(.caption).foregroundStyle(.secondary)
-            Text(UIStrings.text("AI selecteerde deze voorbeeldpassages. De selectie is niet volledig en AI-toelichtingen kunnen onjuist zijn. Controleer de letterlijke passage en de volledige bron in de PDF; scans zonder tekstlaag kunnen ontbreken."))
+            Text(UIStrings.text("AI selected these example passages. The selection may be incomplete, and AI explanations may be wrong. Check the exact passage and full source in the PDF; scans without a text layer may be missing."))
                 .font(.callout).foregroundStyle(.secondary)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) { categoryButtons }
@@ -92,7 +92,7 @@ struct SourceHighlightsView: View {
             }
             let matches = workspace.keyPoints.filter { $0.kind == selected }
             if matches.isEmpty {
-                Text(UIStrings.text(workspace.busy ? "Deze selectie wordt nog verwerkt…" : workspace.keyPointsReady ? "Geen relevante punten in deze categorie gevonden." : "Start de analyse om relevante kernpunten te selecteren.")).foregroundStyle(.secondary)
+                Text(workspace.busy ? "This selection is still processing…" : workspace.keyPointsReady ? "No relevant findings were found in this category." : "Start analysis to find relevant key passages.").foregroundStyle(.secondary)
             }
             ForEach(Array((showAll ? matches : Array(matches.prefix(5))).enumerated()), id: \.element.id) { _, item in
                 let evidence = sourceBound ? workspace.document.flatMap { SourceBoundEvidence.validate(item: item, pages: $0.pages) } : nil
@@ -101,16 +101,16 @@ struct SourceHighlightsView: View {
                     quote: sourceBound ? (evidence?.quote ?? "") : item.quote,
                     sourceQuote: sourceBound ? (evidence?.quote ?? item.passageSources?.first?.quote ?? "") : (item.passageSources?.first?.quote ?? item.quote),
                     page: sourceBound ? min(max(1, item.page), max(1, workspace.document?.pages.count ?? 1)) : item.page,
-                    warning: sourceBound && evidence == nil ? "Bron niet geverifieerd op de opgegeven PDF-pagina. Controleer de oorspronkelijke pagina." : nil,
+                    warning: sourceBound && evidence == nil ? "Source not verified on the stated PDF page. Check the original page." : nil,
                     uiLanguage: uiLanguage,
                     showSource: showSource,
                     readPassage: { evidencePresentation = .passage(item) },
                     broadContext: { evidencePresentation = .broadContext(item) }
                 )
             }
-            if matches.count > 5 { Button(UIStrings.text(showAll ? "Toon minder" : "Toon meer")) { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { showAll.toggle() } } }
+            if matches.count > 5 { Button(showAll ? "Show fewer" : "Show more") { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { showAll.toggle() } } }
             if !workspace.keyPointIssues.isEmpty {
-                Text(UIStrings.text("De kernselectie is onvolledig. Bekijk de verwerkingsstatus bovenaan.")).font(.caption).foregroundStyle(.orange)
+                Text(UIStrings.text("The key findings may be incomplete. Check the processing status above.")).font(.caption).foregroundStyle(.orange)
             }
         }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
             .background(SPTheme.surface, in: RoundedRectangle(cornerRadius: 22))
@@ -134,7 +134,7 @@ struct SourceHighlightsView: View {
     private var categoryButtons: some View {
         ForEach(SourceHighlights.Kind.allCases, id: \.self) { kind in
             Button { selected = kind } label: {
-                Text(UIStrings.text(kind.rawValue))
+                Text(kind.displayTitle)
                     .font(.callout.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -144,8 +144,18 @@ struct SourceHighlightsView: View {
                     .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(selected == kind ? Color.accentColor.opacity(0.6) : .clear) }
             }.buttonStyle(.plain)
                 .accessibilityAddTraits(selected == kind ? .isSelected : [])
-                .accessibilityValue(UIStrings.text(selected == kind ? "Geselecteerd" : "Niet geselecteerd"))
+                .accessibilityValue(selected == kind ? "Selected" : "Not selected")
                 .tutorialTarget(kind == .amounts ? "amounts" : "category-\(kind.rawValue)")
+        }
+    }
+}
+
+private extension SourceHighlights.Kind {
+    var displayTitle: String {
+        switch self {
+        case .decisions: "Proposals and decisions"
+        case .amounts: "Costs and impact"
+        case .dates: "Schedule and conditions"
         }
     }
 }
@@ -164,7 +174,7 @@ struct SourceHighlightCard: View {
     @State private var explanationExpanded = false
 
     private var presentation: SourceCardText.Presentation {
-        SourceCardText.presentation(quote: quote, fallbackTitle: item.title.count <= 100 ? item.title : "Bronpassage")
+        SourceCardText.presentation(quote: quote, fallbackTitle: item.title.count <= 100 ? item.title : "Source passage")
     }
 
     private var explanationTitle: String? {
@@ -199,7 +209,7 @@ struct SourceHighlightCard: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityHint(UIStrings.text(isExpanded ? "Toont weer een korte tekstweergave" : "Toont de volledige tekst"))
+            .accessibilityHint(isExpanded ? "Shows a short text preview" : "Shows the full text")
 
             if !presentation.body.isEmpty {
                 FadingPreviewText(text: presentation.body, font: .system(size: 14), lineSpacing: 4.5, collapsedLines: 4,
@@ -222,7 +232,7 @@ struct SourceHighlightCard: View {
                         explanationExpanded.toggle()
                     } label: {
                         HStack(spacing: 8) {
-                            Text(UIStrings.text("Waarom dit punt?"))
+                            Text(UIStrings.text("Why this point?"))
                             Spacer(minLength: 4)
                             Image(systemName: explanationExpanded ? "chevron.up" : "chevron.down")
                         }
@@ -255,15 +265,15 @@ struct SourceHighlightCard: View {
 
     @ViewBuilder private func footer(horizontal: Bool) -> some View {
         let controls = Group {
-            Button(UIStrings.text("Bron · p. \(page)"), systemImage: "doc.text.magnifyingglass") {
+            Button("Source · p. \(page)", systemImage: "doc.text.magnifyingglass") {
                 showSource(page, sourceQuote)
             }.buttonStyle(FocusQuietActionStyle()).controlSize(.small)
-            Button(UIStrings.text("Lees passage"), systemImage: "text.alignleft", action: readPassage)
+            Button(UIStrings.text("Read passage"), systemImage: "text.alignleft", action: readPassage)
                 .buttonStyle(FocusQuietActionStyle()).controlSize(.small)
             Menu {
-                Button(UIStrings.text("Bekijk bredere context"), systemImage: "doc.text", action: broadContext)
+                Button(UIStrings.text("View broader context"), systemImage: "doc.text", action: broadContext)
             } label: {
-                Label(UIStrings.text("Meer"), systemImage: "ellipsis")
+                Label(UIStrings.text("More"), systemImage: "ellipsis")
             }.focusToolbarMenu().controlSize(.small)
         }
         if horizontal {

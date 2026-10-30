@@ -49,7 +49,7 @@ enum SavedWork {
                 try write(data, key: key, directory: directory)
                 failuresSinceDrain.removeValue(forKey: storageID)
             } catch {
-                let message = "Werk kon niet worden bewaard: " + error.localizedDescription
+                let message = "Work could not be saved: " + error.localizedDescription
                 failuresSinceDrain[storageID] = message
                 NotificationCenter.default.post(name: failure, object: message)
             }

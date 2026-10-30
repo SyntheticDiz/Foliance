@@ -118,7 +118,7 @@ extension Notification.Name {
         }
         presentTerminationFailures = { failures in
             let alert = NSAlert()
-            alert.messageText = UIStrings.text("Niet-bewaarde wijzigingen")
+            alert.messageText = "Unsaved changes"
             alert.informativeText = failures.joined(separator: "\n")
             alert.alertStyle = .warning
             alert.addButton(withTitle: UIStrings.text("OK"))
@@ -161,12 +161,10 @@ struct FolianceApp: App {
     var body: some Scene {
         WindowGroup("Foliance") {
             SimpleView().frame(minWidth: 900, minHeight: 620).tint(SPTheme.accent)
+                .environment(\.locale, Locale(identifier: "en_US"))
                 .buttonStyle(FocusSecondaryButtonStyle())
                 .disclosureGroupStyle(FullRowDisclosureGroupStyle())
                 .onAppear {
-                    if let url = Bundle.main.url(forResource: "Foliance", withExtension: "icns"), let icon = NSImage(contentsOf: url) {
-                        NSApplication.shared.applicationIconImage = icon
-                    }
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 }
@@ -174,12 +172,12 @@ struct FolianceApp: App {
         .defaultSize(width: 1280, height: 840)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button(UIStrings.text("Open pdf…")) { NotificationCenter.default.post(name: .folianceOpenPDF, object: nil) }
+                Button("Open PDF…") { NotificationCenter.default.post(name: .folianceOpenPDF, object: nil) }
                     .keyboardShortcut("o", modifiers: .command)
             }
             WorkspaceFileCommands()
             CommandGroup(after: .textEditing) {
-                Button(UIStrings.text("Zoek in document")) { NotificationCenter.default.post(name: .folianceFind, object: nil) }
+                Button("Search document") { NotificationCenter.default.post(name: .folianceFind, object: nil) }
                     .keyboardShortcut("f", modifiers: .command)
             }
         }
@@ -210,10 +208,10 @@ private struct WorkspaceFileCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .newItem) {
             if let actions {
-                Button(UIStrings.text("Werkdocument openen…")) { actions.open() }
+                Button("Open workspace…") { actions.open() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
                     .disabled(!actions.canOpen)
-                Button(UIStrings.text("Werkdocument bewaren…")) { actions.save() }
+                Button("Save workspace…") { actions.save() }
                     .keyboardShortcut("s", modifiers: .command)
                     .disabled(!actions.canSave)
             }

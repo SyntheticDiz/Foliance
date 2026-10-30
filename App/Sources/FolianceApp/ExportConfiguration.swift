@@ -49,19 +49,19 @@ enum ExportPreset: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .shortOverview: "Kort overzicht"
-        case .selectedWithSources: "Mijn selectie met bronnen"
-        case .fullDossier: "Volledig dossier"
+        case .shortOverview: "Brief overview"
+        case .selectedWithSources: "My selection with sources"
+        case .fullDossier: "Full report"
         }
     }
     var scopeDescription: String {
         switch self {
         case .shortOverview:
-            "De documentsamenvatting en je zelf gekozen passages; geen analysepunten, vragen, tabellen, puntnotities of bronbijlage."
+            "The document overview and passages you selected. Excludes findings, questions, tables, finding notes, and the source appendix."
         case .selectedWithSources:
-            "Gemarkeerde punten en hun beschikbare vragen, met bronpassages, plus je zelf gekozen passages. Geen documentsamenvatting, tabellen, referentievergelijking, afkortingen of notities."
+            "Your selected findings and their available questions, with source passages, plus the passages you selected. Excludes the document overview, tables, reference comparison, abbreviations, and notes."
         case .fullDossier:
-            "Alle beschikbare resultaten binnen hun vermelde paginabereik, inclusief punten, duiding en vragen. Zelf gekozen passages, tabellen, afkortingen en eigen notities zijn documentbreed; beschikbare bronpassages worden toegevoegd."
+            "All available results within their stated page ranges, including findings, comparison, and questions. Your selected passages, tables, abbreviations, and notes cover the whole document; available source passages are included."
         }
     }
 
@@ -164,9 +164,9 @@ struct ExportGlossaryItem: Sendable {
         return Glossary.extract(pages: document.pages, personalTerms: terms).map { entry in
             let own = personal.meaning(entry.abbreviation, document: key)
             if own == nil, entry.definitions.isEmpty, entry.reference == nil, let web = online[Glossary.key(entry.abbreviation)], web.certain, let source = web.source, source.kind == "Wikipedia-introductie" {
-                return Self(term: entry.abbreviation, meaning: web.fullName + "\n" + web.explanation + (web.context.isEmpty ? "" : "\nIn dit document: " + web.context), origin: "Online aangevuld · AI-uitleg · " + source.kind + " · " + web.date.formatted(date: .abbreviated, time: .omitted) + "\n" + source.url.absoluteString)
+                return Self(term: entry.abbreviation, meaning: web.fullName + "\n" + web.explanation + (web.context.isEmpty ? "" : "\nIn this document: " + web.context), origin: "Online source · AI explanation · Wikipedia introduction · " + web.date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "en_US"))) + "\n" + source.url.absoluteString)
             }
-            return Self(term: entry.abbreviation, meaning: own ?? entry.definitions.first?.text ?? entry.reference?.meaning ?? "Betekenis niet vastgesteld", origin: own != nil ? "Eigen definitie" : entry.definitions.first.map { "Uit document, PDF-pagina \($0.page)" } ?? entry.reference.map { "Woordenlijst: \($0.url.absoluteString)" } ?? "Onbekend")
+            return Self(term: entry.abbreviation, meaning: own ?? entry.definitions.first?.text ?? entry.reference?.meaning ?? "Meaning not established", origin: own != nil ? "Custom definition" : entry.definitions.first.map { "From document, PDF page \($0.page)" } ?? entry.reference.map { "Glossary: \($0.url.absoluteString)" } ?? "Unknown")
         }
     }
 }

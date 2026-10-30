@@ -1,37 +1,39 @@
-# Foliance implementation and verification
+# Foliance implementation and release status
 
-30 October 2026. Version 1.0.0, build 2. Work is confined to this project; the original application and its user data were not modified by this work.
+30 October 2026. Version 1.0.0, build 3. Work is confined to this fork; the original application and its data were not changed.
 
-## Product decisions
+## Product and interface
 
-Foliance is a free, general-use, English-only macOS PDF reader and is open source under MIT. Preserve the original app's shared styles, typography, layout and controls. The macOS toolbar explicitly suppresses automatic shared glass backgrounds to retain the original flat controls. The icon is a new corporate folded-page F monogram; its source and exact 1024-pixel bitmap are in Assets.
+Foliance is a free, MIT-licensed macOS PDF reader for reports, project plans and meeting papers. The independent bundle/preferences/sandbox identity is app.foliance.mac; work documents use .foliance. It does not migrate another application's settings, documents or credentials.
 
-Overview is the default base analysis. Report, Project plan and Meeting notes add reviews of full source passages under Findings, Decisions, Actions, Costs, Deadlines, Risks and Context. Reading goals, optional reference documents and comparison criteria are propagated without treating source text as instructions. Quotes and user notes remain verbatim, including non-English source material. App-authored interface, analysis instructions and export labels are English only.
+The interface, tutorial, newly generated explanations and app-authored export labels are English. The build 3 audit replaced missed overview headings, analysis/progress states, extraction notices, recovery and recent-file errors, selection-summary messages, generated table explanations and glossary-origin labels at their source. Dates use an English locale. Original document quotations, user notes and saved analysis text remain verbatim; legacy encoded values stay compatible. Regression tests cover untranslated UI/error templates and preservation of source text.
 
-The independent bundle/preferences/sandbox identity is app.foliance.mac; portable work files use .foliance. There is no predecessor data, credential or settings migration. Work files preserve PDF bytes, results, profile, focus, reference/criteria, notes and reader state. Reopening work does not start AI requests. Recent files activate security-scoped bookmarks before checking access.
+Keep the original shared typography, controls, cards and layout. The toolbar suppresses automatic shared glass backgrounds. The navy folded-page F artwork remains unchanged. The final builder declares Foliance.icns as the single system icon, removes the competing asset-name selector and removes the running-app override. The compiled AppIcon catalog retains its 1024-pixel store image; the release audit checks both resources.
 
-## AI connections
+Overview is the base profile; Report, Project plan and Meeting notes add source-linked review. Reading goals, optional reference documents and criteria guide analysis without treating source content as instructions. Work files preserve the source PDF, results, focus, profile, notes, reference, selected passages and reader state. Reopening work starts no AI request.
 
-Apple Intelligence is the local default. Optional OpenAI API-key billing stores each user's key in its own non-synchronizing Keychain item. Optional Continue with ChatGPT uses OpenAI's documented free/open-source OAuth flow: loopback PKCE, state/nonce, issued-client registration, signed ID-token validation, explicit direct-use scope checks, refresh/revocation and account-specific model lists. ChatGPT registrations have separate Keychain records; only an opaque host identifier and active client identifier are in preferences.
+## AI and privacy
 
-Cloud content requires revocable versioned consent. Captured model identifiers retain API-key versus ChatGPT-plan billing through worker/orchestrator routing and model switches. Missing permission never selects another billing path. Responses requests are HTTPS, streamed and use store:false; this does not promise zero retention. The temporary callback listener binds only to 127.0.0.1. No developer API key or account is bundled, imported or used in tests.
+Apple Intelligence is the local default. OpenAI API-key billing and eligible ChatGPT-plan usage are separate optional routes with versioned, revocable document-sharing consent and separate non-synchronizing Keychain entries. The official free/open-source OAuth flow uses loopback PKCE, state/nonce, signed ID-token validation, issued clients and explicit plan-usage scope checks. Account model catalogs and reasoning options are authoritative. Captured model identifiers preserve billing and orchestrator/worker roles; missing credentials, permission or consent never select a different provider or billing route.
+
+Requests use HTTPS directly to OpenAI with Responses storage disabled; abuse-monitoring retention still applies. The sandbox permits user-selected read/write files, scoped bookmarks, outbound networking and a temporary OAuth callback listener bound only to 127.0.0.1. No credentials or private signing material are bundled. Verification triggered no live AI/document requests or account sign-in.
+
+## Signing and builds
+
+The user accepted Apple's updated Developer Program License Agreement and explicitly approved creating both distribution certificates. Xcode created valid Apple Distribution and Mac Installer Distribution identities. The explicit app ID is registered, and the downloaded Mac App Store distribution profile matches the app, team and application certificate. Certificates/profile expire 30 October 2027. Private keys remain in Keychain; only fingerprints and the external profile path are recorded in ignored AppStore/Submission.local.json. No private keys were exported.
+
+The builder reads explicit environment values before ignored local settings. Store mode creates a universal arm64/x86_64 application and signed installer package; preview mode creates an ad-hoc local runnable build. The final build 3 signed universal package passed signing/profile validation, strict signature verification and the icon/privacy/branding/path audit (log /private/tmp/foliance-build3-store-final.log). Both Mach-O slices declare minimum macOS 26.0. The package is dist/Foliance-1.0.0.pkg. No package has been uploaded or submitted.
 
 ## Verification
 
-The final integrated offline suite passed: 5 core tests and 760 app tests registered, 66 optional/live/private-fixture tests skipped, 0 failures (699 executed). It includes token verification, callback/PKCE, separate account storage, consent, billing isolation, serialized Responses requests, English output labels and exact source preservation. The public export contains a smaller focused suite; inherited research probes are excluded.
+The full offline suite passed: 771 tests registered, 66 optional/live/private-fixture tests skipped, zero failures (705 executed), log /private/tmp/foliance-build3-tests-verified.log. A final focused run after date/icon/provider-label changes passed 83 registered tests, 6 skipped, zero failures, log /private/tmp/foliance-build3-final-focused.log.
 
-Universal arm64/x86_64 release preview built successfully, with a strict ad-hoc signature, sandbox/file-bookmark entitlements, outbound networking plus loopback callback entitlement, English localization and privacy manifest. Release audit passed for identity, old branding, private filesystem paths and embedded API credentials. Native checks confirmed the flat toolbar, modern icon, English settings, separate cloud controls, recent-work opening, source search and local work saving. All native document checks used a clearly labeled fictional prepared fixture, not real AI output.
+A fresh native process verified English Document overview, Analysis status, model details, Reading agenda and Coverage check. Verification/english-overview-status-build3.png records these sections. The user-owned open fictional Sample.pdf work was preserved through the app's Save action as Verification/Sample-before-English-update.foliance before relaunch. Source/model contents were not regenerated. Native Finder inspection was not approved, so default-icon verification relies on bundle declarations/resource checks until a permitted native check is available.
 
-No live ChatGPT sign-in, live model-catalog retrieval or real AI request was performed. Actual account eligibility and end-to-end service access need a user-owned account validation before submission. Existing compiler/SDK deprecation warnings do not prevent the verified build.
+## Public source and remaining release steps
 
-## Public source, website and distribution
+Repository: https://github.com/SyntheticDiz/Foliance . Website: https://syntheticdiz.github.io/Foliance/ with support.html and privacy.html. The expanded app-inspired website is deployed; root static files and App/ application source are kept separate.
 
-Public repository: https://github.com/SyntheticDiz/Foliance . Public site/support/privacy: https://syntheticdiz.github.io/Foliance/ . Static source is in SupportSite. Only audited source, assets, fictional sample and public metadata may be published. Exclude Submission.local.json, signing material, builds/caches, Verification and private documents. The source packager uses an explicit allowlist.
+The initial audited 230-file source export was explicitly approved and published in commit a68e5f435061a4cc1933920404eefb2daf665126. Its exact ZIP is preserved as dist/Foliance-1.0.0-build2-approved-source.zip. The current build 3 source export contains 234 files and compiled independently with all 51 public tests passing (log /private/tmp/foliance-build3-public-tests.log). New source exports must use scripts/package-source.py's public test allowlist. Exclude local submission settings, signing material, build caches, Verification, private research probes and personal documents.
 
-The expanded website was checked in a real browser: app-inspired controls/palette, fictional profile examples, keyboard navigation, support/privacy links and a 390-pixel responsive content viewport. Motion respects reduced-motion preferences. Publication retains the existing GitHub Pages URLs.
-
-The clean public export includes all application source and focused, fictional-data tests. It compiled independently and passed 5 core plus 40 app tests. Inherited tests/probes referencing private research paths or political fixtures are excluded from public source and the distributable source archive; the full local regression suite remains in this development folder. The public export was separately checked for personal paths, old branding, private research paths and embedded credentials.
-
-Remaining publisher prerequisites: application and installer distribution signing identities, explicit bundle-ID registration/provisioning profile, App Store Connect app record and publisher fields, accepted-size final screenshots, review access for optional account features, signed package validation/upload and Apple review. Team and public URLs are stored only in ignored AppStore/Submission.local.json. The preview is ad-hoc signed, not an App Store-signed release, and no submission has been made.
-
-Capability limits: ordinary image-only PDFs need a searchable text layer before import; table extraction and AI interpretation require review; on-device analysis requires compatible Apple Intelligence hardware/model; external OpenAI plan/API limits apply.
+Remaining: App Store Connect app record and publisher/listing/privacy questionnaire fields, accepted-size final screenshots, validation of optional ChatGPT account access with a user-owned account, signed package validation/upload and Apple review. Verification captures are not automatically valid App Store screenshots. A successful build/signature audit does not promise App Store acceptance.

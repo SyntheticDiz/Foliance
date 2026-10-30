@@ -46,7 +46,7 @@ enum SummaryService {
             completed += 1
             await progress(completed, chunks.count)
         }
-        guard !sections.isEmpty else { throw AppError(message: "Samenvatting niet gelukt. " + issues.joined(separator: "\n")) }
+        guard !sections.isEmpty else { throw AppError(message: "The document overview could not be prepared. " + issues.joined(separator: "\n")) }
         return try await finishApple(sections: sections, issues: issues, model: model,
                                     combine: { parts, detailed in try await summarize(render(parts), model: AIConfiguration.orchestratorModel(model), detailed: detailed, request: request) },
                                     mergeProgress: { completed, total in await progress(-(completed + 1), total) })
@@ -62,7 +62,7 @@ enum SummaryService {
             let result = try await appleSections(text: chunk.text, page: chunk.page + 1, model: model)
             sections += result.0; issues += result.1
         }
-        guard !sections.isEmpty else { throw AppError(message: "Samenvatting niet gelukt. " + issues.joined(separator: "\n")) }
+        guard !sections.isEmpty else { throw AppError(message: "The document overview could not be prepared. " + issues.joined(separator: "\n")) }
         return try await finishApple(sections: sections, issues: issues, model: model, progress: { await progress(0, chunks.count) })
     }
 
@@ -72,7 +72,7 @@ enum SummaryService {
                             mergeProgress: ((Int, Int) async -> Void)? = nil) async throws -> DocumentSummary {
         var sections = initial
         var issues = initialIssues
-        guard !sections.isEmpty else { throw AppError(message: "Geen deelsamenvattingen beschikbaar.") }
+        guard !sections.isEmpty else { throw AppError(message: "No partial summaries are available.") }
         func merge(_ parts: [DocumentDigest], detailed: Bool) async throws -> DocumentDigest {
             if let combine { return try await combine(parts, detailed) }
             return try await summarize(render(parts), model: model, detailed: detailed)
@@ -90,7 +90,7 @@ enum SummaryService {
         }) }
         catch {
             try Task.checkCancellation(); if error is CancellationError || error is ChatGPTError { throw error }
-            issues.append("Paginadelen samenvoegen: " + error.localizedDescription)
+            issues.append("Merging page sections: " + error.localizedDescription)
             return fallbackSummary(sections: initial, issues: issues)
         }
         var digests = sections.map(\.digest)
@@ -117,7 +117,7 @@ enum SummaryService {
                 } catch {
                     try Task.checkCancellation()
                     if error is CancellationError || error is ChatGPTError { throw error }
-                    issues.append("Samenvoegen: " + AppleFailure.classify(error).localizedDescription)
+                    issues.append("Merging sections: " + AppleFailure.classify(error).localizedDescription)
                     reductionFailed = true
                 }
             } else {
@@ -131,7 +131,7 @@ enum SummaryService {
                     })
                 } catch {
                     try Task.checkCancellation(); if error is CancellationError || error is ChatGPTError { throw error }
-                    issues.append("Samenvoegen: " + AppleFailure.classify(error).localizedDescription)
+                    issues.append("Merging sections: " + AppleFailure.classify(error).localizedDescription)
                     reductionFailed = true; break
                 }
             }
@@ -140,10 +140,10 @@ enum SummaryService {
         }
         if !reductionFailed && sections.count == 1 {
             do { digests[0] = try await merge(digests, detailed: true); mergedOperations += 1; await mergeProgress?(mergedOperations, mergeTotal) }
-            catch { try Task.checkCancellation(); if error is CancellationError || error is ChatGPTError { throw error }; issues.append("Hoofdsamenvatting: " + error.localizedDescription); reductionFailed = true }
+            catch { try Task.checkCancellation(); if error is CancellationError || error is ChatGPTError { throw error }; issues.append("Final overview: " + error.localizedDescription); reductionFailed = true }
         }
         if reductionFailed { return fallbackSummary(sections: initial, issues: issues) }
-        return DocumentSummary(digest: digests[0], sections: sections, incompleteNotice: issues.isEmpty ? nil : "Samenvatting onvolledig.\n" + issues.joined(separator: "\n"))
+        return DocumentSummary(digest: digests[0], sections: sections, incompleteNotice: issues.isEmpty ? nil : "Document overview is incomplete.\n" + issues.joined(separator: "\n"))
     }
 
     /// Assemble existing results without another model request or new claims.
@@ -152,10 +152,10 @@ enum SummaryService {
         let included = Array(pages.prefix(25))
         let allowance = max(1, 25 / max(1, included.count))
         let overview = included.map { section in
-            "PDF-pagina \(section.page)\n" + limitedSentences(section.digest.overview, maximum: allowance)
+            "PDF page \(section.page)\n" + limitedSentences(section.digest.overview, maximum: allowance)
         }.joined(separator: "\n\n")
-        let omitted = pages.count > included.count ? " Dit compacte overzicht bevat \(included.count) van de \(pages.count) pagina’s met beschikbare deelsamenvattingen." : ""
-        let notice = "Overzicht uit deelsamenvattingen: de hoofdsamenvatting kon niet worden samengevoegd. Hieronder staan bestaande samenvattingsteksten; er is geen nieuwe AI-uitleg toegevoegd." + omitted + " Alle beschikbare delen staan onder ‘Uitgebreide samenvatting’."
+        let omitted = pages.count > included.count ? " This compact overview includes \(included.count) of \(pages.count) pages with available partial summaries." : ""
+        let notice = "Overview from partial summaries: the main overview could not be merged. Existing summary text appears below; no new AI explanation was added." + omitted + " All available sections appear under ‘Extended summary’."
         return DocumentSummary(digest: .init(overview: overview, bullets: []), sections: sections,
                                incompleteNotice: ([notice] + issues).joined(separator: "\n"), fallbackNotice: notice)
     }
@@ -268,7 +268,7 @@ enum SummaryService {
         let response = try await AIService.localResponse(body: body, request: request)
         var digest = try JSONDecoder().decode(DocumentDigest.self, from: Data(response.utf8))
         digest = DocumentDigest(overview: limitedSentences(digest.overview, maximum: detailed ? 25 : 4), bullets: Array(digest.bullets.prefix(5)))
-        guard !digest.overview.isEmpty, digest.overview.utf8.count + digest.bullets.joined().utf8.count <= (detailed ? 8000 : 2200) else { throw AppError(message: "De samenvatting is te lang of onvolledig. Probeer opnieuw.") }
+        guard !digest.overview.isEmpty, digest.overview.utf8.count + digest.bullets.joined().utf8.count <= (detailed ? 8000 : 2200) else { throw AppError(message: "The document overview is too long or incomplete. Try again.") }
         if request == nil { LocalCache.save(digest, key: key) }
         return digest
     }

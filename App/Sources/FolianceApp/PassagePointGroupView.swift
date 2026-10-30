@@ -20,16 +20,16 @@ struct PassagePointGroupView<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text(UIStrings.text("Passage · p. " + parentPages.map { String($0) }.joined(separator: ", ")))
+                    Text("Passage · p. " + parentPages.map { String($0) }.joined(separator: ", "))
                         .font(.subheadline.weight(.semibold))
                     Spacer(minLength: 0)
-                    Button(UIStrings.text("Lees passage"), systemImage: "text.alignleft") {
+                    Button(UIStrings.text("Read passage"), systemImage: "text.alignleft") {
                         showingPassageReader = true
                     }
                     .buttonStyle(FocusQuietActionStyle())
-                    .help(UIStrings.text("Lees de volledige bovenliggende passage"))
+                    .help(UIStrings.text("Read the full parent passage"))
                 }
-                Text(UIStrings.text("\(points.count) punten in deze weergave"))
+                Text("\(points.count) \(points.count == 1 ? "finding" : "findings") in this passage")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

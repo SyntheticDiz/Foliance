@@ -1074,7 +1074,20 @@ enum UIStrings {
         "Voor dit leesprofiel is geen actuele, bronvalide beoordeling beschikbaar. Kies een andere exportscope.": "No current, source-validated review is available for this reading profile. Choose another export scope.",
         "De analyse is onvolledig. Deze melding wordt ook opgenomen in de export.\n": "Analysis is incomplete. This notice is also included in the export.\n",
         "Open deze bronpassage in de PDF": "Open this source passage in the PDF",
-        "Meer resultaten": "More results"
+        "Meer resultaten": "More results",
+        "Kerngegevens uit de bron": "Key information from the source",
+        "Volledige broncontext": "Full source context",
+        "Nog niet vastgelegd": "Not yet recorded",
+        "Commissievoorbereiding": "Committee preparation",
+        "Mode changed. Click Analyse to refresh the points.": "Mode changed. Click Analyze to refresh the findings.",
+        "Analyse reviewed table": "Analyze reviewed table",
+        "Analyse entire document": "Analyze entire document",
+        "Annuleer selectie": "Cancel selection",
+        "Bewaren": "Save",
+        "Kies een punt": "Choose a finding",
+        "Geen passages voor deze filters. Pas de filters aan om andere passages te bekijken.": "No passages match these filters. Adjust the filters to see other passages.",
+        "Geen belangrijk bevonden passages in deze weergave. Bekijk Alle punten of pas de filters aan.": "No passages were assessed as important in this view. Open All findings or adjust the filters.",
+        "Vernieuw punten voor deze pagina’s met referentiedocument": "Refresh findings for these pages using the reference document"
     ]
     private static let patterns: [(String, String)] = [
         ("^Passage · p\\. (.+)$", "Passage · p. $1"),
@@ -1222,6 +1235,15 @@ enum UIStrings {
         ("^Werkdocument geopend; selectie kon niet lokaal worden bewaard: (.*)$", "Workspace opened; could not save selection locally: $1"),
         ("^De diagramuitleg kon niet in het werkdocument worden opgenomen: (.*)$", "Could not add the chart explanation to the workspace: $1"),
         ("^Werk kon niet worden bewaard: (.*)$", "Could not save work: $1"),
+        ("^Gekozen AI-model: (.*)\\. Modeldetails staan bij Details in de verwerkingsstatus\\.$", "Selected AI model: $1. Model details are in the processing status details."),
+        ("^Huidige keuze: (.*)$", "Current choice: $1"),
+        ("^Punten: (.*)$", "Findings: $1"),
+        ("^Documentsamenvatting: (.*)$", "Document overview: $1"),
+        ("^Bronpassages: (.*)$", "Source passages: $1"),
+        ("^Huidige AI-fase: (.*)$", "Current AI stage: $1"),
+        ("^Leesprofiel (.*): beoordeelde punten$", "Reading profile $1: assessed findings"),
+        ("^(.*) · Per vraag worden passende bronfragmenten opgehaald\\. Dit is geen volledige controle van alle tekst\\. Gesprekken worden lokaal bewaard bij dit document en dit bereik\\.$", "$1 · Relevant source excerpts are retrieved for each question. This is not a complete review of all text. Conversations are saved locally for this document and scope."),
+        ("^Vernieuw punten voor deze pagina’s(.*)$", "Refresh findings for these pages$1"),
         ("^PDF-pagina (\\d+)$", "PDF page $1")
     ]
 }

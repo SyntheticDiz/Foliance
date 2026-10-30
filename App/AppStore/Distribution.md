@@ -13,16 +13,20 @@ The project has a sandboxed build configuration and a verified public support/pr
 
 List available identities with `security find-identity -v`. Installer identities are excluded by a `-p codesigning` filter, so do not use that filter when finding the installer certificate.
 
-Set these environment variables to the identities/profile you installed. The values below describe what to substitute; they are not credentials or working example identities.
+The ignored `AppStore/Submission.local.json` can hold the local values `appSigningIdentity`, `installerSigningIdentity`, `provisionProfile` and `teamID`. Environment variables take precedence over those settings when non-empty. This keeps machine-specific signing configuration out of the source while allowing a one-off override.
+
+Alternatively, set these environment variables to the identities/profile you installed. The values below describe what to substitute; they are not credentials or working example identities.
 
 ```sh
 export FOLIANCE_APP_SIGN_IDENTITY='Your Mac application distribution identity'
 export FOLIANCE_INSTALLER_SIGN_IDENTITY='Your Mac installer distribution identity'
 export FOLIANCE_PROVISION_PROFILE='/absolute/path/to/your/distribution.provisionprofile'
-# FOLIANCE_TEAM_ID is read from ignored local submission settings if not set.
+# Each non-empty environment variable overrides its matching ignored local setting.
 python3 scripts/preflight-store.py
 bash build-app.sh store
 ```
+
+The default `scripts/preflight-store.py` run is strict and requires final App Store screenshots. `build-app.sh store` runs the same signing and configuration checks with `--allow-missing-screenshots`, so it can prepare a signed package while listing screenshots are pending. That mode prints a warning and does not establish submission readiness. The signing identities are checked against installed valid certificates and their required certificate types.
 
 `store` builds arm64 and x86_64, validates the profile's team, bundle ID, distribution type and expiry, embeds the profile, signs with sandbox entitlements and creates `dist/Foliance-1.0.0.pkg` with `productbuild`. It does not upload automatically. The builder refuses to present an ad-hoc build as a store package.
 
@@ -30,7 +34,7 @@ Capture App Store screenshots from the final candidate, review the listing/priva
 
 ## Verification and remaining prerequisites
 
-Run `scripts/test.sh`, `scripts/audit-release.py dist/preview/Foliance.app` and `scripts/preflight-store.py`. See HANDOFF.md for the actual results and unverified steps. A successful source/build audit does not replace App Store validation or review.
+Run `scripts/test.sh`, `scripts/audit-release.py dist/preview/Foliance.app` and `scripts/preflight-store.py`. See HANDOFF.md for the actual results and unverified steps. A successful source/build audit does not replace App Store validation or review. Building a package with `--allow-missing-screenshots` does not mean the listing is ready to submit.
 
 No publishing credentials, private keys, passwords or API tokens are committed or embedded. Never add `.p12`, `.p8`, provisioning profiles or `.env` files to public version control. The source packager must omit `Submission.local.json` and all signing material.
 

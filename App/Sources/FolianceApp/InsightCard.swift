@@ -35,10 +35,10 @@ struct InsightCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 8) {
-                Label(UIStrings.text("PDF-pagina \(point.page)"), systemImage: "doc.text")
+                Label("PDF page \(point.page)", systemImage: "doc.text")
                     .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                 Spacer()
-                if selected { Label(UIStrings.text("In beeld"), systemImage: "smallcircle.filled.circle").font(.caption).foregroundStyle(.secondary) }
+                if selected { Label(UIStrings.text("In view"), systemImage: "smallcircle.filled.circle").font(.caption).foregroundStyle(.secondary) }
                 if let committeeLabel {
                     Text(UIStrings.text(committeeLabel)).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 }
@@ -60,8 +60,8 @@ struct InsightCard: View {
                         .foregroundStyle(starred ? .orange : .secondary)
                         .contentTransition(.opacity)
                 }
-                    .buttonStyle(.plain).help(UIStrings.text(starred ? "Verwijder uit mijn selectie" : "Bewaar in mijn selectie"))
-                    .accessibilityLabel(UIStrings.text(starred ? "Verwijder uit mijn selectie" : "Bewaar in mijn selectie"))
+                    .buttonStyle(.plain).help(starred ? "Remove from My selection" : "Save to My selection")
+                    .accessibilityLabel(starred ? "Remove from My selection" : "Save to My selection")
                     .tutorialTarget("star")
             }
             Button {
@@ -82,8 +82,8 @@ struct InsightCard: View {
                     }.foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain)
-            .accessibilityLabel(point.title + ", " + UIStrings.text("PDF-pagina \(point.page)"))
-            .accessibilityValue(point.summary + ", " + UIStrings.text(summaryExpanded ? "Uitgeklapt" : "Ingeklapt"))
+            .accessibilityLabel(point.title + ", PDF page \(point.page)")
+                    .accessibilityValue(point.summary + ", " + (summaryExpanded ? "Expanded" : "Collapsed"))
             .tutorialTarget("source")
 
             VStack(alignment: .leading, spacing: 0) {
@@ -96,8 +96,8 @@ struct InsightCard: View {
 
             if annotation.isChecked(point) || !annotation.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 HStack(spacing: 12) {
-                    if annotation.isChecked(point) { Label(UIStrings.text("Door mij gecontroleerd"), systemImage: "checkmark.circle.fill") }
-                    if !annotation.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { Label(UIStrings.text("Notitie"), systemImage: "note.text") }
+                    if annotation.isChecked(point) { Label(UIStrings.text("Checked by me"), systemImage: "checkmark.circle.fill") }
+                    if !annotation.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { Label(UIStrings.text("Note"), systemImage: "note.text") }
                 }.font(.caption).foregroundStyle(.secondary)
             }
             if detailsExpanded {
@@ -140,15 +140,15 @@ struct InsightCard: View {
 
     @ViewBuilder private var sourceActions: some View {
         if !(point.passageSources ?? []).isEmpty || !point.quote.isEmpty {
-            Button(UIStrings.text("Lees passage", language: uiLanguage), systemImage: "text.alignleft") { showingPassageReader = true }
+            Button(UIStrings.text("Read passage", language: uiLanguage), systemImage: "text.alignleft") { showingPassageReader = true }
                 .buttonStyle(FocusQuietActionStyle())
-                .accessibilityHint("Opens the available passage with search and source links")
+        .accessibilityHint("Opens the available passage with search and source links")
         } else if !cardSourceCollection.entries.isEmpty {
-            Button(UIStrings.text("Lees passage", language: uiLanguage), systemImage: "text.alignleft") { showingPassageReader = true }
+            Button(UIStrings.text("Read passage", language: uiLanguage), systemImage: "text.alignleft") { showingPassageReader = true }
                 .buttonStyle(FocusQuietActionStyle())
                 .accessibilityHint("Opens the available source information")
         }
-        Button(UIStrings.text(detailsExpanded ? "Minder details" : "Details")) {
+        Button(detailsExpanded ? "Less detail" : "Details") {
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) { detailsExpanded.toggle() }
         }.buttonStyle(FocusQuietActionStyle())
     }
@@ -162,44 +162,44 @@ struct InsightCard: View {
     @ViewBuilder private var detailsSections: some View {
         if let committeeReason, !committeeReason.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text(UIStrings.text("Waarom is dit relevant voor het gekozen leesdoel?")).font(.caption.bold())
+                Text(UIStrings.text("Why it matters for this reading goal")).font(.caption.bold())
                 ReadableText(text: committeeReason).font(.callout).foregroundStyle(.secondary)
             }
         }
         if let generalReason, generalReason != committeeReason {
             VStack(alignment: .leading, spacing: 8) {
-                Text(UIStrings.text("Waarom dit punt aandacht krijgt")).font(.caption.bold())
+                Text(UIStrings.text("Why this point matters")).font(.caption.bold())
                 ReadableText(text: generalReason).font(.callout).foregroundStyle(.secondary)
             }
         }
         if !neutral && !point.relevance.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
-                Text(UIStrings.text("Vergelijking met referentiedocument")).font(.caption.bold())
+                Text(UIStrings.text("Reference comparison")).font(.caption.bold())
                 ReadableText(text: point.programSource.map { point.relevance.replacingOccurrences(of: "\n\n" + $0, with: "") } ?? point.relevance)
             }
         }
         if !neutral && !point.question.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
-                Text(UIStrings.text("Vraag om uit te zoeken")).font(.caption.bold())
+                Text(UIStrings.text("Question to resolve")).font(.caption.bold())
                 Text(point.question).textSelection(.enabled)
             }
         }
 
         VStack(alignment: .leading, spacing: 8) {
-            Text(UIStrings.text("Mijn controle en notitie")).font(.headline)
-            Toggle(UIStrings.text("Door mij gecontroleerd aan de bron"), isOn: Binding(get: { annotation.isChecked(point) }, set: { checked in
+            Text(UIStrings.text("My source check and note")).font(.headline)
+            Toggle(UIStrings.text("Checked against the source by me"), isOn: Binding(get: { annotation.isChecked(point) }, set: { checked in
                 var updated = annotation; updated.checkedSignature = checked ? PointAnnotation.signature(point) : nil; annotationChanged(updated)
             })).toggleStyle(.checkbox)
-            TextField(UIStrings.text("Eigen notitie"), text: Binding(get: { annotation.note }, set: { text in
+            TextField(UIStrings.text("Personal note"), text: Binding(get: { annotation.note }, set: { text in
                 var updated = annotation; updated.note = text; annotationChanged(updated)
             }), axis: .vertical).textFieldStyle(FocusInputFieldStyle()).lineLimit(2...6)
-            Text(UIStrings.text("Je controlemarkering is een eigen beoordeling; gewijzigde AI-tekst moet opnieuw worden gecontroleerd."))
+            Text(UIStrings.text("Your review mark is your own assessment; changed AI text must be checked again."))
                 .font(.caption).foregroundStyle(.secondary)
         }
 
         VStack(alignment: .leading, spacing: 10) {
-            Text(UIStrings.text("Vragen")).font(.headline)
-            Button(UIStrings.text("Stel een vraag"), systemImage: "bubble.left") { explain() }
+            Text(UIStrings.text("Questions")).font(.headline)
+            Button(UIStrings.text("Ask a question"), systemImage: "bubble.left") { explain() }
                 .buttonStyle(FocusQuietActionStyle()).tutorialTarget("ask")
             if questions.count < 5 {
                 Button(UIStrings.text(questionActionTitle), systemImage: "questionmark.bubble") { generate() }
@@ -216,7 +216,7 @@ struct InsightCard: View {
                 }
             }
             if !loading && questions.count < 5 {
-                Text(UIStrings.text("Alleen vragen met gecontroleerde broncitaten worden getoond.")).font(.caption).foregroundStyle(.secondary)
+                Text(UIStrings.text("Only questions with verified source quotations are shown.")).font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -227,23 +227,23 @@ struct InsightCard: View {
     }
 
     private var questionActionTitle: String {
-        if questions.isEmpty { return error == nil ? "Maak vragen om uit te zoeken" : "Probeer opnieuw" }
+        if questions.isEmpty { return error == nil ? "Create follow-up questions" : "Try again" }
         return "Vul ontbrekende vragen aan"
     }
 
     /// Only show a small category when the point's own wording contains a clear signal.
     private var classificationLabel: String? {
         switch point.relevanceClass {
-        case "main": UIStrings.text("Hoofdpunt", language: uiLanguage)
-        case "background": UIStrings.text("Achtergrond", language: uiLanguage)
-        case "uncertain": UIStrings.text("Onzeker", language: uiLanguage)
+        case "main": UIStrings.text("Main point", language: uiLanguage)
+        case "background": UIStrings.text("Background", language: uiLanguage)
+        case "uncertain": UIStrings.text("Uncertain", language: uiLanguage)
         default: nil
         }
     }
 
     private var partLabel: String? {
         guard let index = point.passagePartIndex, let count = point.passagePartCount, count > 1 else { return nil }
-        return UIStrings.text("Alineadeel \(index) van \(count)", language: uiLanguage)
+        return "Paragraph \(index) of \(count)"
     }
 
     private var contentLabel: String? {
@@ -253,14 +253,14 @@ struct InsightCard: View {
         }
         if !matches(#"\bgeen\s+voorstel\b|\bniet\s+voorgesteld\b"#, in: text),
            matches(#"\bvoorstel\b|\bstelt\s+voor\b|\bvoorgesteld\b"#, in: text) {
-            return UIStrings.text("Voorstel", language: uiLanguage)
+            return UIStrings.text("Proposal", language: uiLanguage)
         }
         if !matches(#"\b(?:geen|niet)\b"#, in: text),
            matches(#"\bheeft\s+besloten\b|\bis\s+vastgesteld\b"#, in: text) {
             return "Decision"
         }
         if text.contains("€") || matches(#"\b\d[\d.,]*\s*(?:miljoen|miljard|duizend)?\s*euro\b"#, in: text) {
-            return UIStrings.text("Bedragen", language: uiLanguage)
+            return UIStrings.text("Amounts", language: uiLanguage)
         }
         return nil
     }

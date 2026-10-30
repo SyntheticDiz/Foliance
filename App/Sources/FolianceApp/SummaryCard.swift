@@ -14,44 +14,44 @@ struct SummaryCard: View {
     @State private var expanded = false
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label(UIStrings.text("Documentbreed overzicht"), systemImage: "doc.text").font(.system(size: 21, weight: .semibold))
+            Label(UIStrings.text("Document-wide overview"), systemImage: "doc.text").font(.system(size: 21, weight: .semibold))
             if showsOptions {
-            Text(UIStrings.text("Deze acties gelden voor de gekozen fysieke PDF-pagina’s. Laat leeg voor het hele document; voorbeelden: 3–7, 12.")).font(.caption).foregroundStyle(.secondary)
-            Text(UIStrings.text("Gekozen AI-model: \(AIConfiguration.label(model)). Modeldetails staan bij Details in de verwerkingsstatus.")).font(.caption).foregroundStyle(.secondary)
+            Text(UIStrings.text("These actions apply to the selected physical PDF pages. Leave blank for the entire document; examples: 3–7, 12.")).font(.caption).foregroundStyle(.secondary)
+            Text("Selected AI model: \(AIConfiguration.label(model)). See Analysis status → Model details for the saved model choices.").font(.caption).foregroundStyle(.secondary)
             HStack {
-                TextField(UIStrings.text("Pagina’s (leeg = alles)"), text: $workspace.requestedSelection).textFieldStyle(FocusInputFieldStyle())
+                TextField(UIStrings.text("Pages (blank = all)"), text: $workspace.requestedSelection).textFieldStyle(FocusInputFieldStyle())
             }
             HStack {
-                Button(UIStrings.text("Vernieuw documentoverzicht"), systemImage: "text.alignleft") { workspace.summarize(model: model, selection: pageSelection) }.disabled(!workspace.canStartAnalysis)
-                Button(UIStrings.text("Chat over pagina’s"), systemImage: "bubble.left.and.bubble.right") {
+                Button(UIStrings.text("Refresh document overview"), systemImage: "text.alignleft") { workspace.summarize(model: model, selection: pageSelection) }.disabled(!workspace.canStartAnalysis)
+                Button(UIStrings.text("Page chat"), systemImage: "bubble.left.and.bubble.right") {
                     do { chat(try PageScope.parse(pageSelection, count: workspace.document?.pages.count ?? 0)) }
                     catch { workspace.error = error.localizedDescription }
-                }.help(UIStrings.text("Chat over deze pagina’s; leeg betekent alle pagina’s")).disabled(workspace.busy)
+                }.help(UIStrings.text("Chat about these pages; blank means all pages")).disabled(workspace.busy)
             }
-            Button(UIStrings.text(compareProgram ? "Vernieuw punten voor deze pagina’s met referentiedocument" : "Vernieuw punten voor deze pagina’s")) {
+            Button(compareProgram ? "Refresh findings for these pages using the reference document" : "Refresh findings for these pages") {
                 workspace.analyze(model: model, context: workspace.focus, selection: pageSelection, compareProgram: compareProgram)
             }.disabled(!workspace.canStartAnalysis)
             Menu {
-                Button(UIStrings.text("Analyseer hele document"), systemImage: "arrow.clockwise") {
+                Button("Analyze the entire document", systemImage: "arrow.clockwise") {
                     workspace.requestedSelection = ""
                     workspace.analyze(model: model, context: workspace.focus, targeted: false, compareProgram: compareProgram)
                 }.disabled(!workspace.canStartAnalysis)
-            } label: { Text(UIStrings.text("Meer analyseacties")).foregroundStyle(Color.primary) }
+            } label: { Text(UIStrings.text("More analysis actions")).foregroundStyle(Color.primary) }
                 .disabled(!workspace.canStartAnalysis).focusMenu()
             }
             if let summary = workspace.documentSummary {
                 Text(UIStrings.text(workspace.summaryScope)).font(.caption).foregroundStyle(.secondary)
                 if let notice = summary.fallbackNotice {
-                    Label(UIStrings.text("Overzicht uit deelsamenvattingen"), systemImage: "doc.on.doc").font(.headline)
+                    Label(UIStrings.text("Overview from partial summaries"), systemImage: "doc.on.doc").font(.headline)
                     Text(UIStrings.text(notice)).font(.caption).foregroundStyle(.secondary)
                 }
                 ReadableText(text: summary.digest.overview).font(.system(size: 14))
-                if !summary.digest.bullets.isEmpty { Text(UIStrings.text("Belangrijkste punten")).font(.headline).padding(.top, 8) }
+                if !summary.digest.bullets.isEmpty { Text(UIStrings.text("Key points")).font(.headline).padding(.top, 8) }
                 ForEach(Array(summary.digest.bullets.prefix(5).enumerated()), id: \.offset) { _, point in Text("• " + point).font(.body).textSelection(.enabled) }
                 if let document = workspace.document {
                     CommissionRequestView(pages: PageScope.mask(document.pages, selected: workspace.summaryPages.isEmpty ? Array(1...document.pages.count) : workspace.summaryPages)) { showPage($0) }
                 }
-                Button(UIStrings.text(expanded ? "Sluit uitgebreide samenvatting" : "Uitgebreide samenvatting"), systemImage: "text.alignleft") { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { expanded.toggle() } }.buttonStyle(FocusQuietActionStyle()).tutorialTarget("summary")
+                Button(expanded ? "Close full overview" : "Full overview", systemImage: "text.alignleft") { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { expanded.toggle() } }.buttonStyle(FocusQuietActionStyle()).tutorialTarget("summary")
                 if expanded {
                     LazyVStack(alignment: .leading, spacing: 16) {
                         ForEach(Array(workspace.summaryPageSections.enumerated()), id: \.offset) { _, section in
@@ -60,8 +60,8 @@ struct SummaryCard: View {
                     }
                 }
             } else {
-                Text(UIStrings.text(workspace.busy ? "De samenvatting wordt voorbereid…" : "Kies de pagina’s en maak een neutrale samenvatting met hoofdpunten.")).foregroundStyle(.secondary)
-                Button(UIStrings.text("Maak documentoverzicht"), systemImage: "sparkles") { workspace.summarize(model: model, selection: pageSelection) }.disabled(!workspace.canStartAnalysis)
+                Text(workspace.busy ? "Preparing the overview…" : "Choose pages and create a neutral overview with key points.").foregroundStyle(.secondary)
+                Button("Create document overview", systemImage: "sparkles") { workspace.summarize(model: model, selection: pageSelection) }.disabled(!workspace.canStartAnalysis)
             }
 
         }.font(.body).lineSpacing(5).padding(24).frame(maxWidth: .infinity, alignment: .leading)
@@ -78,7 +78,7 @@ struct SummaryPageSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Divider()
-            Button(UIStrings.text("Toon in PDF · p. \(section.page)"), systemImage: "doc.text.magnifyingglass") { showPage(section.page) }
+            Button("Show in PDF · p. \(section.page)", systemImage: "doc.text.magnifyingglass") { showPage(section.page) }
                 .buttonStyle(FocusQuietActionStyle())
             ReadableText(text: section.digest.overview)
             ForEach(Array(section.digest.bullets.enumerated()), id: \.offset) { _, point in

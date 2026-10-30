@@ -2,13 +2,13 @@ import Foundation
 import SwiftUI
 
 enum SearchKind: String, CaseIterable, Hashable, Sendable {
-    case summary = "Samenvatting"
-    case point = "Aandachtspunt"
-    case table = "Tabeluitleg"
-    case glossary = "Afkorting"
-    case pdf = "PDF-tekst"
-    case chosenPassage = "Zelf gekozen passage"
-    case annotation = "Eigen notitie"
+    case summary = "Document overview"
+    case point = "Finding"
+    case table = "Table explanation"
+    case glossary = "Abbreviation"
+    case pdf = "PDF text"
+    case chosenPassage = "Selected passage"
+    case annotation = "Personal note"
 }
 
 enum SearchAction: Hashable, Sendable {
@@ -79,10 +79,10 @@ enum UnifiedSearch {
             if meaning == nil { meaning = entry.definitions.first?.text }
             if meaning == nil { meaning = entry.reference?.meaning }
             if meaning == nil, web?.certain == true { meaning = web?.fullName }
-            let definition = meaning ?? "Betekenis niet vastgesteld"
+            let definition = meaning ?? "Meaning not established"
             var explanation = entry.reference?.explanation ?? ""
             if explanation.isEmpty, web?.certain == true { explanation = web?.explanation ?? "" }
-            let pageLabel: String? = entry.occurrences.first.map { occurrence in "PDF-pagina \(occurrence.page)" }
+            let pageLabel: String? = entry.occurrences.first.map { occurrence in "PDF page \(occurrence.page)" }
             let record = SearchRecord(id: "glossary-" + key, kind: .glossary,
                                       title: entry.abbreviation, content: definition + " " + explanation,
                                       pageLabel: pageLabel, action: .glossary(entry.abbreviation))
@@ -94,8 +94,8 @@ enum UnifiedSearch {
                 .filter { !$0.isEmpty }
             for (blockIndex, block) in blocks.enumerated() {
                 records.append(.init(id: "pdf-\(index)-\(blockIndex)", kind: .pdf,
-                                     title: "PDF-pagina \(index + 1)", content: block,
-                                     pageLabel: "PDF-pagina \(index + 1)", action: .page(index + 1, quote: block)))
+                                     title: "PDF page \(index + 1)", content: block,
+                                     pageLabel: "PDF page \(index + 1)", action: .page(index + 1, quote: block)))
             }
         }
         return records
@@ -105,38 +105,38 @@ enum UnifiedSearch {
                                 chosenPassages: [ChosenPassage] = [], annotations: [String: PointAnnotation] = [:]) -> [SearchRecord] {
         var records: [SearchRecord] = []
         if let summary {
-            records.append(.init(id: "summary-all", kind: .summary, title: "Samenvatting van het document",
+            records.append(.init(id: "summary-all", kind: .summary, title: "Document overview",
                                  content: summary.digest.overview + " " + summary.digest.bullets.joined(separator: " "),
                                  pageLabel: nil, action: .summary))
             for section in summary.pageSections {
                 records.append(.init(id: "summary-\(section.page)", kind: .summary,
-                                     title: "Samenvatting PDF-pagina \(section.page)",
+                                     title: "Overview · PDF page \(section.page)",
                                      content: section.digest.overview + " " + section.digest.bullets.joined(separator: " "),
-                                     pageLabel: "PDF-pagina \(section.page)", action: .page(section.page, quote: nil)))
+                                     pageLabel: "PDF page \(section.page)", action: .page(section.page, quote: nil)))
             }
         }
         for point in points {
             let content = [point.title, point.summary, point.relevance, point.question].joined(separator: " ")
             records.append(.init(id: "point-" + point.id, kind: .point, title: point.title,
-                                 content: content, pageLabel: "PDF-pagina \(point.page)",
+                                 content: content, pageLabel: "PDF page \(point.page)",
                                  action: .point(id: point.id, page: point.page, quote: point.quote)))
             if let note = annotations[SimpleWorkspace.selectionKey(point)]?.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 records.append(.init(id: "point-note-" + point.id, kind: .annotation,
-                                     title: UIStrings.text("Eigen notitie") + " · " + point.title, content: note,
-                                     pageLabel: "PDF-pagina \(point.page)",
+                                     title: UIStrings.text("Personal note") + " · " + point.title, content: note,
+                                     pageLabel: "PDF page \(point.page)",
                                      action: .point(id: point.id, page: point.page, quote: point.quote)))
             }
         }
         for passage in chosenPassages {
             records.append(.init(id: "chosen-" + passage.id.uuidString, kind: .chosenPassage,
                                  title: passage.title, content: passage.text + " " + passage.note,
-                                 pageLabel: passage.pages.first.map { "PDF-pagina \($0)" },
+                                 pageLabel: passage.pages.first.map { "PDF page \($0)" },
                                  action: .chosenPassage(passage.id)))
         }
         for table in tables {
             let content = ([table.title, table.overview] + table.bullets + table.notes + table.headers + table.rows.flatMap { $0 }).joined(separator: " ")
             let firstPage = table.pages.first
-            let label = table.pages.count == 1 ? firstPage.map { "PDF-pagina \($0)" } : firstPage.map { "Vanaf PDF-pagina \($0)" }
+            let label = table.pages.count == 1 ? firstPage.map { "PDF page \($0)" } : firstPage.map { "From PDF page \($0)" }
             records.append(.init(id: "table-" + table.id, kind: .table, title: table.displayTitle,
                                  content: content, pageLabel: label,
                                  action: .table(id: table.id, page: firstPage)))
@@ -216,17 +216,17 @@ struct UnifiedSearchView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField(UIStrings.text("Zoek in PDF, samenvatting, punten, tabellen, afkortingen en eigen werk…"), text: $query)
+                TextField(UIStrings.text("Search PDF, summary, findings, tables, abbreviations and your notes…"), text: $query)
                     .textFieldStyle(.plain)
                     .focused($searchFocused)
-                    .accessibilityLabel(UIStrings.text("Zoek in hele document en analyse"))
+                    .accessibilityLabel(UIStrings.text("Search the entire document and analysis"))
                     .tutorialTarget("search")
-                if !query.isEmpty { Button(UIStrings.text("Wis zoekopdracht"), systemImage: "xmark.circle.fill") { query = "" }.labelStyle(.iconOnly) }
+                if !query.isEmpty { Button(UIStrings.text("Clear search"), systemImage: "xmark.circle.fill") { query = "" }.labelStyle(.iconOnly) }
             }.padding(12).modifier(GlassSurface())
-            Toggle(UIStrings.text("Ook andere woordvormen"), isOn: $includeWordForms)
+            Toggle(UIStrings.text("Include other word forms"), isOn: $includeWordForms)
                 .toggleStyle(.checkbox)
                 .font(.callout)
-                .help(UIStrings.text("Toon aanvullende treffers met een andere Nederlandse woordvorm. Exacte resultaten blijven bovenaan staan."))
+                .help(UIStrings.text("Show additional matches with another Dutch word form. Exact results remain first."))
             if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let found = completedRequest == request ? hits : []
                 let extra = includeWordForms && completedAssistanceRequest == request ? wordFormHits : []
@@ -236,7 +236,7 @@ struct UnifiedSearchView: View {
                 }
                 if !hints.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(UIStrings.text("Bedoel je:")).font(.callout).foregroundStyle(.secondary)
+                        Text(UIStrings.text("Did you mean:")).font(.callout).foregroundStyle(.secondary)
                         ViewThatFits(in: .horizontal) {
                             HStack { suggestionButtons(hints) }
                             VStack(alignment: .leading) { suggestionButtons(hints) }
@@ -244,23 +244,23 @@ struct UnifiedSearchView: View {
                     }
                 }
                 if found.isEmpty {
-                    Text(UIStrings.text(isSearching ? "Zoeken…" : indexing ? "PDF-tekst en afkortingen worden doorzocht…" : includeWordForms ? "Geen exacte resultaten gevonden." : "Geen resultaten gevonden."))
+                    Text((isSearching ? "Searching…" : indexing ? "Searching PDF text and abbreviations…" : includeWordForms ? "No exact matches found." : "No results found."))
                         .foregroundStyle(.secondary)
                 }
                 else {
                     let count = selectedKind.map { kind in found.filter { $0.record.kind == kind }.count } ?? found.count
-                    Text(UIStrings.text("\(count) resultaten") + (selectedKind == nil ? "" : " " + UIStrings.text("van") + " \(found.count)") + (indexing ? UIStrings.text(" · ") + UIStrings.text("PDF-tekst en afkortingen laden nog") : "")).font(.caption).foregroundStyle(.secondary)
+                    Text("\(count) results" + (selectedKind == nil ? "" : " " + UIStrings.text("of") + " \(found.count)") + (indexing ? UIStrings.text(" · ") + UIStrings.text("PDF text and abbreviations are still loading") : "")).font(.caption).foregroundStyle(.secondary)
                     resultGroups(found)
                 }
                 if !extra.isEmpty {
                     Divider()
-                    Text(UIStrings.text("Andere woordvormen") + " · \(extra.count)").font(.headline)
-                    Text(UIStrings.text("Aanvullende treffers; de betekenis kan verschillen. De oorspronkelijke bron blijft behouden."))
+                    Text(UIStrings.text("Other word forms") + " · \(extra.count)").font(.headline)
+                    Text(UIStrings.text("Additional matches; the meaning may differ. The original source is preserved."))
                         .font(.caption).foregroundStyle(.secondary)
                     resultGroups(extra)
                 }
                 if preparingAssistance {
-                    Text(UIStrings.text("Zoekhulp voorbereiden…")).font(.caption).foregroundStyle(.secondary)
+                    Text(UIStrings.text("Preparing search assistance…")).font(.caption).foregroundStyle(.secondary)
                 }
             }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
@@ -340,7 +340,7 @@ struct UnifiedSearchView: View {
         ForEach(hints, id: \.self) { suggestion in
             Button(suggestion) { query = suggestion }
                 .buttonStyle(FocusSecondaryButtonStyle())
-                .help(UIStrings.text("Zoek met deze spelling"))
+                .help(UIStrings.text("Search with this spelling"))
         }
     }
 
@@ -351,7 +351,7 @@ struct UnifiedSearchView: View {
             let limit = limitsByKind[kind, default: 3]
             let inKind = Array(kindHits.prefix(limit))
             if (selectedKind == nil || selectedKind == kind), !kindHits.isEmpty {
-                Text(UIStrings.text(kind.rawValue) + " · \(counts[kind, default: 0])").font(.headline)
+                Text(kind.rawValue + " · \(counts[kind, default: 0])").font(.headline)
                 ForEach(inKind) { hit in
                     Button { open(hit.record) } label: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -366,7 +366,7 @@ struct UnifiedSearchView: View {
                         .background(SPTheme.surface, in: RoundedRectangle(cornerRadius: 12))
                 }
                 if kindHits.count > limit {
-                    Button(UIStrings.text("Meer resultaten") + " · " + UIStrings.text(kind.rawValue)) {
+                    Button(UIStrings.text("More results") + " · " + kind.rawValue) {
                         limitsByKind[kind] = limit + 30
                     }.buttonStyle(FocusQuietActionStyle())
                 }
@@ -377,20 +377,20 @@ struct UnifiedSearchView: View {
     private func searchKindPicker(for found: [SearchHit]) -> some View {
         let counts = Dictionary(grouping: found, by: { $0.record.kind }).mapValues(\.count)
         let selectedCount = selectedKind.map { counts[$0, default: 0] } ?? found.count
-        return FocusMenuPicker(UIStrings.text("Resultaatsoort"), selection: $selectedKind,
-                               selectedTitle: (selectedKind.map { UIStrings.text($0.rawValue) } ?? UIStrings.text("Alle resultaten")) + " · \(selectedCount)") {
-                Text(UIStrings.text("Alle resultaten") + " · \(found.count)").tag(Optional<SearchKind>.none)
+        return FocusMenuPicker(UIStrings.text("Result type"), selection: $selectedKind,
+                               selectedTitle: (selectedKind.map { $0.rawValue } ?? UIStrings.text("All results")) + " · \(selectedCount)") {
+                Text(UIStrings.text("All results") + " · \(found.count)").tag(Optional<SearchKind>.none)
                 ForEach(SearchKind.allCases, id: \.self) { kind in
                     let count = counts[kind, default: 0]
                     if count > 0 || selectedKind == kind {
-                        Text(UIStrings.text(kind.rawValue) + " · \(count)").tag(Optional(kind))
+                        Text(kind.rawValue + " · \(count)").tag(Optional(kind))
                     }
                 }
             }
             .controlSize(.small)
-            .help(UIStrings.text("Kies een soort om snel naar de bijbehorende resultaten te gaan"))
+            .help(UIStrings.text("Choose a type to jump to its results"))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(UIStrings.text("Resultaatsoort"))
+        .accessibilityLabel(UIStrings.text("Result type"))
     }
 
 }

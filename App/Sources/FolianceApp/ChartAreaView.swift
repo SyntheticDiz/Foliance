@@ -14,41 +14,41 @@ struct ChartAreaView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(UIStrings.text("Diagramgebied kiezen")).font(.title2.bold())
+            Text(UIStrings.text("Choose chart area")).font(.title2.bold())
             GeometryReader { geometry in
                 VStack(spacing: 12) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 14) {
-                            Text(UIStrings.text("PDF-pagina \(page)")).font(.callout)
-                            Text(UIStrings.text("Geef de uitsnede op als percentage van de pagina. Links en boven zijn de afstand tot de paginarand. Neem titel en legenda mee."))
+                            Text("PDF page \(page)").font(.callout)
+                            Text(UIStrings.text("Enter the area as a percentage of the page. Left and top are distances from the page edge. Include the title and legend."))
                                 .fixedSize(horizontal: false, vertical: true)
                             if geometry.size.width >= 520 {
                                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 12) {
                                     GridRow {
-                                        field("Van links (%)", value: $left)
-                                        field("Van boven (%)", value: $top)
+                                        field("From left (%)", value: $left)
+                                        field("From top (%)", value: $top)
                                     }
                                     GridRow {
-                                        field("Breedte (%)", value: $width)
-                                        field("Hoogte (%)", value: $height)
+                                        field("Width (%)", value: $width)
+                                        field("Height (%)", value: $height)
                                     }
                                 }
                             } else {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    field("Van links (%)", value: $left)
-                                    field("Van boven (%)", value: $top)
-                                    field("Breedte (%)", value: $width)
-                                    field("Hoogte (%)", value: $height)
+                                    field("From left (%)", value: $left)
+                                    field("From top (%)", value: $top)
+                                    field("Width (%)", value: $width)
+                                    field("Height (%)", value: $height)
                                 }
                             }
-                            if !valid { Text(UIStrings.text("De uitsnede moet volledig binnen de pagina vallen.")) .foregroundStyle(.orange) }
+                            if !valid { Text(UIStrings.text("The area must fit entirely within the page.")) .foregroundStyle(.orange) }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     HStack {
-                        Button(UIStrings.text("Annuleren")) { dismiss() }.keyboardShortcut(.cancelAction)
+                        Button(UIStrings.text("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                         Spacer()
-                        Button(UIStrings.text("Gebruik uitsnede")) {
+                        Button(UIStrings.text("Use area")) {
                             select(CGRect(x: left / 100, y: 1 - (top + height) / 100, width: width / 100, height: height / 100))
                             dismiss()
                         }.buttonStyle(FocusPrimaryButtonStyle()).disabled(!valid).keyboardShortcut(.defaultAction)

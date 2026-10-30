@@ -30,14 +30,14 @@ struct OCRTableReviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(UIStrings.text("Controleer tabel aan de bron")).font(.title2.bold())
+            Text(UIStrings.text("Check table against source")).font(.title2.bold())
             GeometryReader { geometry in
                 VStack(spacing: 10) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(draft.title + " · " + UIStrings.text("PDF-pagina \(draft.pages.map(String.init).joined(separator: ", "))"))
+                            Text(draft.title + " · " + "PDF pages \(draft.pages.map(String.init).joined(separator: ", "))")
                                 .font(.callout)
-                            Text(UIStrings.text("Kies een cel of kolomkop, vergelijk de uitsnede en pas zo nodig de tekst aan. Vul een ontbrekende waarde nooit in op basis van een totaal. Een lege cel blijft leeg; een afgedrukte nul wordt 0."))
+                            Text(UIStrings.text("Choose a cell or column header, compare the crop, and edit the text if needed. Never fill in a missing value based on a total. Empty cells stay empty; a printed zero is 0."))
                                 .font(.callout).fixedSize(horizontal: false, vertical: true)
                             if geometry.size.width >= 820 {
                                 HStack(alignment: .top, spacing: 18) {
@@ -48,7 +48,7 @@ struct OCRTableReviewView: View {
                                 VStack(alignment: .leading, spacing: 12) { editorPane; sourcePane }
                             }
                             tableGrid
-                            DisclosureGroup(UIStrings.text("Rekencontroles · \(report.checks.filter { $0.state == .matched }.count) sluiten aan · \(report.checks.filter { $0.state == .mismatch }.count) afwijkingen")) {
+                            DisclosureGroup("Calculation checks · \(report.checks.filter { $0.state == .matched }.count) match · \(report.checks.filter { $0.state == .mismatch }.count) differ") {
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 6) {
                                         ForEach(report.checks.indices, id: \.self) { i in
@@ -60,29 +60,29 @@ struct OCRTableReviewView: View {
                                 }.frame(maxHeight: 110)
                             }
                             if !report.unresolvedCells.isEmpty {
-                                Text(UIStrings.text("Nog \(report.unresolvedCells.count) onzekere cellen. Een cel kiezen laat de bronuitsnede zien."))
+                                Text("\(report.unresolvedCells.count) unresolved \(report.unresolvedCells.count == 1 ? "cell" : "cells"). Select a cell to view its source crop.")
                                     .foregroundStyle(.orange)
                             }
                             ForEach(Array(report.issues.prefix(3).enumerated()), id: \.offset) { _, issue in
                                 Text(UIStrings.text(issue)).font(.caption).foregroundStyle(.orange)
                             }
-                            Toggle(UIStrings.text("Ik heb de kolomkoppen, waarden en lege cellen met de oorspronkelijke PDF vergeleken."), isOn: $confirmsSource)
+                            Toggle(UIStrings.text("I compared the column headers, values, and empty cells with the original PDF."), isOn: $confirmsSource)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     ViewThatFits(in: .horizontal) {
                         HStack {
-                            Button(UIStrings.text("Annuleren")) { dismiss() }.keyboardShortcut(.cancelAction)
+                            Button(UIStrings.text("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                             Spacer(minLength: 6)
-                            Button(UIStrings.text("Correcties bewaren")) { store(confirmed: false) }
+                            Button(UIStrings.text("Save corrections")) { store(confirmed: false) }
                             confirmButton
                         }
                         VStack(alignment: .trailing, spacing: 8) {
                             confirmButton
                             HStack {
-                                Button(UIStrings.text("Annuleren")) { dismiss() }.keyboardShortcut(.cancelAction)
+                                Button(UIStrings.text("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                                 Spacer()
-                                Button(UIStrings.text("Correcties bewaren")) { store(confirmed: false) }
+                                Button(UIStrings.text("Save corrections")) { store(confirmed: false) }
                             }
                         }
                     }
@@ -98,11 +98,11 @@ struct OCRTableReviewView: View {
 
     private var editorPane: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text((selectedRow < 0 ? UIStrings.text("Kolomkop \(selectedColumn + 1)") : UIStrings.text("Rij \(selectedRow + 1)")) +
+            Text((selectedRow < 0 ? "Column header \(selectedColumn + 1)" : "Row \(selectedRow + 1)") +
                  (selectedRow < 0 ? "" : " · " + draft.headers[selectedColumn]))
                 .font(.headline).lineLimit(2)
-            TextField(UIStrings.text("Waarde zoals in de bron"), text: value).textFieldStyle(FocusInputFieldStyle())
-            Text(UIStrings.text("Gebruik de Nederlandse getalnotatie: bijvoorbeeld -1.250 of 1.234,50."))
+            TextField(UIStrings.text("Value as shown in the source"), text: value).textFieldStyle(FocusInputFieldStyle())
+            Text(UIStrings.text("Use a decimal point and comma separators, for example -1,250 or 1,234.50."))
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .contain)
@@ -110,18 +110,18 @@ struct OCRTableReviewView: View {
 
     private var sourcePane: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(UIStrings.text("Originele uitsnede")).font(.headline)
+            Text(UIStrings.text("Original crop")).font(.headline)
             if let image {
                 Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: 330, maxHeight: 135).background(Color.white)
             } else {
-                Text(UIStrings.text("Geen celuitsnede bewaard. Bekijk deze cel via de bronknop in de PDF."))
+                Text(UIStrings.text("No cell crop was saved. View this cell using the source button in the PDF."))
                     .frame(maxWidth: 330, minHeight: 72, alignment: .leading)
             }
         }
     }
 
     private var confirmButton: some View {
-        Button(UIStrings.text("Broncontrole bevestigen")) { store(confirmed: true) }
+        Button(UIStrings.text("Confirm source review")) { store(confirmed: true) }
             .buttonStyle(FocusPrimaryButtonStyle())
             .disabled(!confirmsSource || !report.canConfirm).keyboardShortcut(.defaultAction)
     }
@@ -140,19 +140,19 @@ struct OCRTableReviewView: View {
             }.padding(8)
         }
         .frame(minHeight: 110, maxHeight: 250)
-        .accessibilityLabel(UIStrings.text("Tabelcellen: kies een kop of cel om de bronuitsnede te bekijken"))
+        .accessibilityLabel(UIStrings.text("Table cells: choose a header or cell to view its source crop"))
     }
 
     private func cell(_ text: String, row: Int, column: Int) -> some View {
         Button { selectedRow = row; selectedColumn = column; refreshImage() } label: {
-            Text(text.isEmpty ? UIStrings.text("[leeg]") : text).font(row < 0 ? .caption.bold() : .caption)
+            Text(text.isEmpty ? UIStrings.text("[empty]") : text).font(row < 0 ? .caption.bold() : .caption)
                 .frame(width: column == 0 ? 220 : 140, alignment: .leading).frame(minHeight: 35).padding(6)
                 .background(selectedRow == row && selectedColumn == column ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel((row < 0 ? UIStrings.text("Kolomkop") : UIStrings.text("Rij \(row + 1)")) +
-                            ", " + UIStrings.text("kolom") + " \(column + 1): " +
-                            (text.isEmpty ? UIStrings.text("leeg") : text))
+        .accessibilityLabel((row < 0 ? UIStrings.text("Column header") : "Row \(row + 1)") +
+                            ", " + UIStrings.text("column") + " \(column + 1): " +
+                            (text.isEmpty ? UIStrings.text("empty") : text))
     }
 
     private func selectFirstUncertain() {

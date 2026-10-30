@@ -57,7 +57,7 @@ enum PageLayout {
         overrides: [Int: LayoutOverride],
         progress: (@Sendable (_ completedPages: Int, _ totalPages: Int) -> Void)? = nil
     ) throws -> LayoutDocument {
-        guard let pdf = PDFDocument(data: data), !pdf.isLocked else { throw AppError(message: "PDF niet leesbaar.") }
+        guard let pdf = PDFDocument(data: data), !pdf.isLocked else { throw AppError(message: "The PDF could not be read.") }
         return try extract(pdf: pdf, overrides: overrides, progress: progress,
                            sourceFingerprint: LayoutStore.fingerprint(data))
     }
@@ -99,7 +99,7 @@ enum PageLayout {
     private static func extractPage(_ page: PDFPage?, number: Int, override: LayoutOverride,
                                     includeTables: Bool) throws -> PageExtractionCache.Page {
         guard let page else {
-            return .init(reading: .init(text: "", notice: "Pagina niet leesbaar."), rawTables: [],
+            return .init(reading: .init(text: "", notice: "This PDF page could not be read."), rawTables: [],
                          hasTextLayer: false, appliedOverride: override)
         }
         var reading: PageReading
@@ -118,19 +118,19 @@ enum PageLayout {
                 let recognized = try TableOCR.extract(page: page, number: number)
                 rawTables += recognized
                 if !recognized.isEmpty {
-                    ocrNotice = "Afbeeldingstabel met OCR gelezen. Controleer de herkende cellen in Tabellen; deze zijn niet in de AI-analyse opgenomen."
+                    ocrNotice = "An image table was read with OCR. Check the recognized cells in Tables; it was not included in AI analysis."
                 }
             } catch is CancellationError { throw CancellationError() }
-            catch { ocrNotice = "OCR van afbeeldingstabellen niet voltooid. Bekijk de tabel in de bron-PDF." }
+            catch { ocrNotice = "OCR for image tables could not be completed. Review the table in the source PDF." }
         }
         let fragments = allWords.filter {
             region == nil || region!.contains(CGPoint(x: $0.rect.midX, y: $0.rect.midY))
         }
         reading = order(fragments, bounds: bounds, columns: override.columns)
         if region == nil && !fragments.isEmpty && fragments.allSatisfy({ $0.rect.maxY < bounds.minY + bounds.height * 0.08 }) {
-            reading = .init(text: "", notice: "Alleen een paginavoet herkend; afbeeldingen zijn niet als tekst geanalyseerd.")
+            reading = .init(text: "", notice: "Only a page footer was detected; images were not analyzed as text.")
         }
-        if region != nil { reading.notice = "Alleen het handmatig aangewezen tekstgebied is meegenomen." }
+        if region != nil { reading.notice = "Only the manually selected text region was included." }
         if let ocrNotice { reading.notice = [reading.notice, ocrNotice].filter { !$0.isEmpty }.joined(separator: " ") }
         return .init(reading: reading, rawTables: rawTables, hasTextLayer: hasTextLayer,
                      appliedOverride: override)
@@ -160,7 +160,7 @@ enum PageLayout {
         return fragments
     }
     static func order(_ words: [Fragment], bounds: CGRect, columns: Int = 0) -> PageReading {
-        guard !words.isEmpty else { return .init(text: "", notice: "Geen tekstlaag in deze pagina; niet automatisch verwerkt.") }
+        guard !words.isEmpty else { return .init(text: "", notice: "This page has no text layer and was not processed automatically.") }
         let sorted = words.sorted { $0.rect.midY > $1.rect.midY }
         var rows: [[Fragment]] = []
         for word in sorted {
@@ -236,7 +236,7 @@ enum PageLayout {
         }
         let suspicious = rows.filter { $0.count > 1 && !numeric($0) && $0.filter { $0.text.count > 15 }.count > 1 }.count
         if columns == 0 && cuts.isEmpty && suspicious >= 3 {
-            return .init(text: "", notice: "Leesvolgorde blijft onzeker na automatische hercontrole; deze pagina is overgeslagen.")
+            return .init(text: "", notice: "Reading order remains uncertain after automatic review; this page was skipped.")
         }
         var output: [String] = []; var buffer: [Fragment] = []; var footnotes: [Fragment] = []
         var headings: [String] = []

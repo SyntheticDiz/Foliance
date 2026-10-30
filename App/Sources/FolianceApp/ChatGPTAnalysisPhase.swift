@@ -7,9 +7,9 @@ enum ChatGPTAnalysisPhase: String, CaseIterable, Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .points: "Punten"
-        case .summary: "Documentsamenvatting"
-        case .highlights: "Bronpassages"
+        case .points: "Findings"
+        case .summary: "Document overview"
+        case .highlights: "Source passages"
         }
     }
 

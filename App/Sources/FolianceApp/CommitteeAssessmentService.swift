@@ -249,7 +249,7 @@ enum CommitteeAssessmentService {
                                      routedModel: String, request: @escaping AIService.Request,
                                      useCache: Bool, progress: @escaping Progress) async throws -> Review {
         let passages = PassageEngine.passages(pages)
-        let baseReason = "Deze passage is nog niet volledig beoordeeld."
+        let baseReason = "This passage has not been fully assessed yet."
         let initialEntries = passages.map {
             Assessment(passageID: $0.id, sources: $0.sources, rating: .unassessed,
                        reason: baseReason, evidenceQuote: "", model: routedModel,
@@ -283,7 +283,7 @@ enum CommitteeAssessmentService {
                 if let quote = navigationOnlyEvidence(in: work.passage.text) {
                     let assessment = Assessment(
                         passageID: work.passage.id, sources: work.passage.sources, rating: .other,
-                        reason: "Dit is uitsluitend een inhoudsopgave met puntleiders en paginanummers.",
+                        reason: "This is only a table of contents with dot leaders and page numbers.",
                         evidenceQuote: quote, model: routedModel)
                     return Outcome(assessment: assessment, issue: nil, cacheable: false)
                 }
@@ -371,7 +371,7 @@ enum CommitteeAssessmentService {
                 if let quote = navigationOnlyEvidence(in: work.passage.text) {
                     let assessment = Assessment(passageID: work.passage.id, sources: work.passage.sources,
                                                 rating: .other,
-                                                reason: "Dit is uitsluitend een inhoudsopgave met puntleiders en paginanummers.",
+                                                reason: "This is only a table of contents with dot leaders and page numbers.",
                                                 evidenceQuote: quote, model: routedModel)
                     return Outcome(assessment: assessment, issue: nil, cacheable: false)
                 }
@@ -423,7 +423,7 @@ enum CommitteeAssessmentService {
         review.issues = currentUnassessedIssues(review.entries)
         review.complete = review.issues.isEmpty && review.entries.allSatisfy { $0.rating != .unassessed }
         guard validate(review, pages: pages, purpose: purpose, model: model) else {
-            throw AppError(message: "De hervatte beoordeling kon niet veilig aan de volledige bronpassages worden gekoppeld.")
+            throw AppError(message: "The resumed review could not be safely matched to the complete source passages.")
         }
         return review
     }
@@ -444,7 +444,7 @@ enum CommitteeAssessmentService {
                                    failureCode: FailureCode,
                                    contextSources: [Insight.Source] = []) -> Assessment {
         Assessment(passageID: passage.id, sources: passage.sources, rating: .unassessed,
-                   reason: reason.isEmpty ? "Deze passage kon niet worden beoordeeld." : reason,
+                   reason: reason.isEmpty ? "This passage could not be assessed." : reason,
                    evidenceQuote: "", model: model, failureCode: failureCode,
                    contextSources: contextSources.isEmpty ? nil : contextSources)
     }
@@ -452,20 +452,20 @@ enum CommitteeAssessmentService {
     private static func check(_ result: ModelResult, core: String) -> ModelResultCheck {
         guard let rating = Rating(rawValue: result.rating) else {
             return .failed(.init(code: .invalidRating,
-                                 reason: "Het model gaf een beoordeling buiten de toegestane opties."))
+                                 reason: "The model returned a rating outside the allowed options."))
         }
         guard rating != .unassessed else {
-            return .failed(.init(code: .noDecision, reason: "Het model deed geen uitspraak voor deze passage."))
+            return .failed(.init(code: .noDecision, reason: "The model did not assess this passage."))
         }
         guard !result.reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return .failed(.init(code: .missingReason, reason: "De beoordeling bevatte geen reden."))
+            return .failed(.init(code: .missingReason, reason: "The assessment did not include a reason."))
         }
         guard !result.evidenceQuote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return .failed(.init(code: .missingQuote, reason: "De beoordeling bevatte geen broncitaat."))
+            return .failed(.init(code: .missingQuote, reason: "The assessment did not include a source quote."))
         }
         guard let quote = resolveEvidenceQuote(result.evidenceQuote, in: core) else {
             return .failed(.init(code: .quoteMismatch,
-                                 reason: "Het broncitaat kon niet veilig als letterlijke tekst worden teruggevonden."))
+                                 reason: "The source quote could not be verified as literal text."))
         }
         return .valid(.init(quote: quote, rating: rating, reason: result.reason,
                             categoryID: result.categoryID, secondaryCategoryIDs: result.secondaryCategoryIDs))
@@ -473,7 +473,7 @@ enum CommitteeAssessmentService {
 
     private static func requestFailure(_ reason: String) -> ValidationFailure {
         ValidationFailure(code: .requestFailure,
-                          reason: reason.isEmpty ? "De beoordelingsaanvraag is mislukt." : reason)
+                          reason: reason.isEmpty ? "The assessment request failed." : reason)
     }
 
     private static func sameSources(_ lhs: [Insight.Source], _ rhs: [Insight.Source]) -> Bool {
@@ -577,9 +577,9 @@ enum CommitteeAssessmentService {
         }
         guard !pieces.isEmpty else {
             return Outcome(assessment: unassessed(passage, model: model,
-                                                  reason: "De bronpassage bevat geen te beoordelen tekst.",
+                                                  reason: "The source passage contains no text to assess.",
                                                   failureCode: .notAttempted, contextSources: contextSources),
-                           issue: "Lege bronpassage.", cacheable: false)
+                           issue: "Empty source passage.", cacheable: false)
         }
 
         var results: [ModelResult] = []
@@ -624,7 +624,7 @@ enum CommitteeAssessmentService {
                 guard case .failed(let value) = result else { return nil }
                 return value
             }.first ?? ValidationFailure(code: .noDecision,
-                                           reason: "Het model deed geen uitspraak voor deze passage.")
+                                           reason: "The model did not assess this passage.")
             return Outcome(assessment: unassessed(passage, model: model, reason: failure.reason,
                                                   failureCode: failure.code, contextSources: contextSources),
                            issue: failure.reason, cacheable: false)
@@ -637,7 +637,7 @@ enum CommitteeAssessmentService {
             // A split can separate a condition or qualification from the section
             // it limits. Keep the parent visible and never make a definitive rank.
             rating = .uncertain
-            reason = "Gesplitste alinea; voorwaarden kunnen tussen delen samenhangen. Controleer de volledige bron."
+            reason = "Paragraph split across parts; conditions may be related across sections. Check the complete source."
         } else {
             rating = validResults[0].rating
             reason = validResults[0].reason
@@ -687,16 +687,16 @@ enum CommitteeAssessmentService {
         let instructions = AIConfiguration.isChatGPT(model)
             ? coreInstructions + (contextSources.isEmpty ? "" : """
 
-            APARTE CONTEXT mag alleen helpen om onderwerp, jaartal, eenheid of voetnoot van CORE te duiden. Haal geen andere tabelrij over en vul geen oorzaak of status in. evidenceQuote moet uitsluitend letterlijke tekst uit CORE bevatten; gebruik CONTEXT nooit als bewijs.
+            SEPARATE CONTEXT may clarify the topic, year, unit, or footnote in CORE only. Do not include another table row or infer a cause or status. evidenceQuote must be an exact, literal quote from CORE; never use CONTEXT as evidence.
             """)
             : coreInstructions + "\n\n" + localImportanceNote
         let localizedInstructions = instructions + "\n\n" + AnalysisLanguage.instruction
         let input: String
         if AIConfiguration.isChatGPT(model), !contextSources.isEmpty {
-            let separateContext = contextSources.map { "PDF-pagina \($0.page):\n\($0.quote)" }.joined(separator: "\n\n")
-            input = "CORE (enige bewijsbron):\n\(core)\n\nAPARTE CONTEXT (geen bewijs):\n\(separateContext)"
+            let separateContext = contextSources.map { "PDF page \($0.page):\n\($0.quote)" }.joined(separator: "\n\n")
+            input = "CORE (only evidence source):\n\(core)\n\nSEPARATE CONTEXT (not evidence):\n\(separateContext)"
         } else {
-            input = "CORE (enige bewijsbron):\n\(core)"
+            input = "CORE (only evidence source):\n\(core)"
         }
         let schema: [String: Any] = [
             "type": "object", "additionalProperties": false,

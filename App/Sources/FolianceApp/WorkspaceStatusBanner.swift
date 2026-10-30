@@ -63,8 +63,8 @@ struct FullRowDisclosureGroupStyle: DisclosureGroupStyle {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityValue(UIStrings.text(configuration.isExpanded ? "Uitgeklapt" : "Ingeklapt"))
-            .accessibilityHint(UIStrings.text("Vouw de inhoud uit of in"))
+            .accessibilityValue(configuration.isExpanded ? "Expanded" : "Collapsed")
+            .accessibilityHint(UIStrings.text("Expand or collapse the contents"))
 
             if configuration.isExpanded {
                 configuration.content
@@ -122,7 +122,7 @@ struct WorkspaceStatusBanner: View {
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     Spacer(minLength: 4)
                     if workspace.committeeReviewBusy && strip.showsCommittee {
-                        Button(UIStrings.text("Stop beoordeling")) { workspace.stopCommitteeReview() }
+                        Button(UIStrings.text("Stop assessment")) { workspace.stopCommitteeReview() }
                             .buttonStyle(FocusSecondaryButtonStyle()).controlSize(.small)
                     }
                 }
@@ -137,10 +137,10 @@ struct WorkspaceStatusBanner: View {
 
     private var compactStatusTitle: String {
         if workspace.committeeReviewBusy {
-            let phase = workspace.committeeReviewStatus.hasPrefix("Onderwerpen") ? "Onderwerpen indelen" : "Gerichte beoordeling"
+            let phase = workspace.committeeReviewStatus.hasPrefix("Onderwerpen") ? "Categorizing topics" : "Profile review"
             return "\(phase) · \(workspace.committeeReviewCompleted)/\(workspace.committeeReviewTotal)"
         }
-        return "Basisanalyse bezig"
+        return "Base analysis in progress"
     }
 
     @ViewBuilder private var warningRows: some View {
@@ -155,15 +155,15 @@ struct WorkspaceStatusBanner: View {
             warningButton(compactCriticalSourceTitle, symbol: "exclamationmark.triangle.fill")
         }
         if strip.committeeNeedsAttention {
-            warningButton("Gerichte beoordeling onvolledig", symbol: "person.3.fill")
+            warningButton("Profile review incomplete", symbol: "person.3.fill")
         }
         if !strip.hasCriticalSourceWarning && !strip.committeeNeedsAttention && strip.showsCategorizationAction {
-            warningButton("Indeling onvolledig", symbol: "square.grid.2x2")
+            warningButton("Topic grouping incomplete", symbol: "square.grid.2x2")
         }
         if compactWarningCount == 1 && !strip.hasCriticalSourceWarning && !strip.committeeNeedsAttention && !strip.showsCategorizationAction {
             warningButton(workspace.baseAnalysisIncomplete || workspace.summaryError != nil || !workspace.analysisIssues.isEmpty ||
                           !workspace.keyPointIssues.isEmpty || !workspace.citationWarning.isEmpty || workspace.error != nil
-                          ? "Basisanalyse onvolledig" : "Broncontrole vraagt aandacht",
+                          ? "Base analysis incomplete" : "Source checks need attention",
                           symbol: "exclamationmark.triangle.fill")
         }
     }
@@ -178,7 +178,7 @@ struct WorkspaceStatusBanner: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityHint(UIStrings.text("Toon de bijbehorende statusdetails en herstelacties"))
+        .accessibilityHint(UIStrings.text("Show the related status details and recovery actions"))
     }
 
     private var compactWarningCount: Int {
@@ -194,8 +194,8 @@ struct WorkspaceStatusBanner: View {
 
     private var compactCriticalSourceTitle: String {
         strip.criticalSourcePages.count == 1
-            ? "PDF-pagina \(strip.criticalSourcePages[0]) niet meegenomen"
-            : "\(strip.criticalSourcePages.count) pagina’s niet meegenomen"
+            ? "PDF page \(strip.criticalSourcePages[0]) was not included"
+            : "\(strip.criticalSourcePages.count) pages were not included"
     }
 
     private var hasDetails: Bool {
@@ -208,12 +208,12 @@ struct WorkspaceStatusBanner: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {
             if workspace.analyzed {
-                Text("\(workspace.insights.count) " + UIStrings.text("documentpunten") + " · \(workspace.keyPoints.count) " + UIStrings.text("documentkernpunten"))
+                Text("\(workspace.insights.count) \(workspace.insights.count == 1 ? "document finding" : "document findings") · \(workspace.keyPoints.count) \(workspace.keyPoints.count == 1 ? "key finding" : "key findings")")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if !workspace.layoutNotice.isEmpty || !sourceIssues.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(UIStrings.text("PDF-uitlezing en broncontrole")).font(.caption.bold())
+                    Text(UIStrings.text("PDF reading and source checks")).font(.caption.bold())
                     if !workspace.layoutNotice.isEmpty {
                         Text(UIStrings.text(workspace.layoutNotice)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     }
@@ -222,7 +222,7 @@ struct WorkspaceStatusBanner: View {
                             Button(UIStrings.text(issue.title)) { showPage(issue.page) }.buttonStyle(FocusQuietActionStyle())
                             Text(UIStrings.text(issue.notice)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                             ForEach(workspace.tables.filter { $0.recognizedWithOCR == true && $0.pages.contains(issue.page) }) { table in
-                                Button(UIStrings.text("Controleer tabel") + " · " + table.title) { showTable(table.id) }.buttonStyle(FocusQuietActionStyle())
+                                Button(UIStrings.text("Check table") + " · " + table.title) { showTable(table.id) }.buttonStyle(FocusQuietActionStyle())
                             }
                         }.padding(.vertical, 3)
                     }
@@ -231,8 +231,8 @@ struct WorkspaceStatusBanner: View {
             if workspace.baseAnalysisIncomplete || workspace.summaryError != nil || !workspace.analysisIssues.isEmpty ||
                 !workspace.keyPointIssues.isEmpty || !workspace.citationWarning.isEmpty || workspace.error != nil {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(UIStrings.text("Basisanalyse")).font(.caption.bold())
-                    Text(UIStrings.text(workspace.analysisState.rawValue)).font(.caption).foregroundStyle(.secondary)
+                    Text(UIStrings.text("Base analysis")).font(.caption.bold())
+                    Text(analysisStateLabel(workspace.analysisState)).font(.caption).foregroundStyle(.secondary)
                     if let error = workspace.error { Text(UIStrings.text(error)).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
                     if let error = workspace.summaryError { Text(UIStrings.text(error)).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
                     if !workspace.analysisIssues.isEmpty { Text(UIStrings.text(workspace.analysisIssues)).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
@@ -250,7 +250,7 @@ struct WorkspaceStatusBanner: View {
 
     @ViewBuilder private var committeeDetails: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(UIStrings.text("Gerichte beoordeling")).font(.caption.bold())
+            Text(UIStrings.text("Focused review")).font(.caption.bold())
             if workspace.committeeReviewBusy {
                 Text(UIStrings.text(workspace.committeeReviewStatus) + " \(workspace.committeeReviewCompleted)/\(workspace.committeeReviewTotal)")
                     .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
@@ -260,16 +260,16 @@ struct WorkspaceStatusBanner: View {
             }
             if let review = selectedReview {
                 if review.model != AIConfiguration.selectedModel {
-                    Text(UIStrings.text("Deze beoordeling gebruikt een ander model. Met de huidige modelkeuze begint een nieuwe beoordeling; eerdere resultaten blijven bewaard."))
+                    Text(UIStrings.text("This review used a different model. Choosing the current model starts a new review; previous results remain saved."))
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 if !review.complete {
-                    Label(UIStrings.text("Gerichte beoordeling onvolledig; niet beoordeelde passages blijven beschikbaar."), systemImage: "exclamationmark.circle")
+                    Label(UIStrings.text("Profile review incomplete; unassessed passages remain available."), systemImage: "exclamationmark.circle")
                         .font(.caption).foregroundStyle(.orange)
                     CommitteeFailureDetails(review: review, showSource: showSource)
                 }
             } else {
-                Text(UIStrings.text("Nog geen gerichte beoordeling beschikbaar. De bron en bestaande analyse blijven behouden."))
+                Text(UIStrings.text("No profile review is available yet. The source and existing analysis remain available."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             if strip.showsAssessmentAction, let title = strip.assessmentActionTitle {
@@ -277,7 +277,7 @@ struct WorkspaceStatusBanner: View {
                     .buttonStyle(FocusSecondaryButtonStyle()).disabled(!strip.assessmentActionEnabled)
             }
             if strip.showsCategorizationAction {
-                Button(UIStrings.text("Deel in op onderwerpen")) { workspace.categorizeCommitteeReview() }
+                Button(UIStrings.text("Categorize by topic")) { workspace.categorizeCommitteeReview() }
                     .buttonStyle(FocusQuietActionStyle()).disabled(!strip.categorizationActionEnabled)
             }
         }

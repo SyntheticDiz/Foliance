@@ -10,7 +10,7 @@ struct SelectedPDFText: Equatable, Codable, Sendable {
         self.sources = sources
     }
     var wordCount: Int { text.split(whereSeparator: { $0.isWhitespace }).count }
-    var pageLabel: String { "PDF-pagina’s " + pages.map(String.init).joined(separator: ", ") }
+    var pageLabel: String { "PDF pages " + pages.map(String.init).joined(separator: ", ") }
 }
 
 @MainActor final class SelectionSummary: ObservableObject {
@@ -26,14 +26,14 @@ struct SelectedPDFText: Equatable, Codable, Sendable {
     private var retryModel: String?
     @discardableResult func start(_ selection: SelectedPDFText, model: String) -> Task<Void, Never> {
         close()
-        self.selection = selection; retryModel = model; busy = true; status = "Selectie samenvatten…"
+        self.selection = selection; retryModel = model; busy = true; status = "Summarizing selection…"
         let id = generation
         task = Task {
             do {
                 let result = try await summarizeDocument([selection.text], model) { current, total in
                     await MainActor.run {
                         guard self.generation == id else { return }
-                        self.status = current == 0 ? "Samenvatting samenvoegen…" : "Selectie samenvatten: deel \(current) van \(total)…"
+                        self.status = current == 0 ? "Combining summary…" : "Summarizing selection: part \(current) of \(total)…"
                     }
                 }
                 try Task.checkCancellation()
@@ -43,7 +43,7 @@ struct SelectedPDFText: Equatable, Codable, Sendable {
                                                  notice: result.incompleteNotice, model: model))
             } catch {
                 guard generation == id else { return }
-                self.error = Task.isCancelled ? "Samenvatten gestopt." : error.localizedDescription
+                self.error = Task.isCancelled ? "Summary stopped." : error.localizedDescription
             }
             if generation == id { busy = false }
         }

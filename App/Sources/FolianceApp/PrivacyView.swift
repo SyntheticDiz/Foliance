@@ -12,13 +12,13 @@ struct PrivacyView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Label(UIStrings.text("Privacy"), systemImage: "hand.raised").font(.title2.bold())
+                Label("Privacy", systemImage: "hand.raised").font(.title2.bold())
                 Spacer()
-                Button(UIStrings.text("Gereed")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
             HStack(spacing: 20) {
-                Link(UIStrings.text("Support"), destination: URL(string: "https://syntheticdiz.github.io/Foliance/support.html")!)
-                Link(UIStrings.text("Public privacy policy"), destination: URL(string: "https://syntheticdiz.github.io/Foliance/privacy.html")!)
+                Link("Support", destination: URL(string: "https://syntheticdiz.github.io/Foliance/support.html")!)
+                Link("Public privacy policy", destination: URL(string: "https://syntheticdiz.github.io/Foliance/privacy.html")!)
             }
             ScrollView { Text(policy).font(.body).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
         }.padding(24).frame(width: 620, height: 560)

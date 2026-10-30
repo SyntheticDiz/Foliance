@@ -71,6 +71,13 @@ final class EnglishOnlyTests: XCTestCase {
         XCTAssertEqual(UIStrings.text("Bron · PDF-pagina 4"), "Source · PDF page 4")
         XCTAssertEqual(UIStrings.text("Geen geëxtraheerde tekst op deze pagina."), "No text was extracted from this page.")
         XCTAssertEqual(UIStrings.text("Meer resultaten"), "More results")
+        XCTAssertEqual(UIStrings.text("Kerngegevens uit de bron"), "Key information from the source")
+        XCTAssertEqual(UIStrings.text("Mode changed. Click Analyse to refresh the points."),
+                       "Mode changed. Click Analyze to refresh the findings.")
+        XCTAssertEqual(UIStrings.text("Leesprofiel General: beoordeelde punten"),
+                       "Reading profile General: assessed findings")
+        XCTAssertEqual(UIStrings.text("3 · Per vraag worden passende bronfragmenten opgehaald. Dit is geen volledige controle van alle tekst. Gesprekken worden lokaal bewaard bij dit document en dit bereik."),
+                       "3 · Relevant source excerpts are retrieved for each question. This is not a complete review of all text. Conversations are saved locally for this document and scope.")
     }
 
     func testSettingsDoNotOfferAnInterfaceLanguagePicker() throws {

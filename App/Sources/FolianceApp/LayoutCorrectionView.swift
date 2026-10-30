@@ -22,22 +22,22 @@ struct LayoutCorrectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(UIStrings.text("Tekstindeling controleren")).font(.title2.bold())
-            Text(UIStrings.text("Dit is een optioneel vangnet. De app bepaalt de leesvolgorde normaal automatisch en slaat onzekere pagina’s over."))
+            Text(UIStrings.text("Review text layout")).font(.title2.bold())
+            Text(UIStrings.text("This is an optional fallback. The app normally determines reading order automatically and skips uncertain pages."))
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             GeometryReader { geometry in
                 VStack(spacing: 10) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                Stepper(UIStrings.text("PDF-pagina \(page)"), value: $page,
+                                Stepper("PDF page \(page)", value: $page,
                                         in: 1...max(1, workspace.document?.pages.count ?? 1)).disabled(saving)
-                                FocusMenuPicker(UIStrings.text("Indeling"), selection: $columns,
-                                                selectedTitle: UIStrings.text([0: "Automatisch", 1: "Eén kolom", 2: "Twee kolommen", 3: "Drie kolommen"][columns] ?? "Automatisch")) {
-                                    Text(UIStrings.text("Automatisch")).tag(0)
-                                    Text(UIStrings.text("Eén kolom")).tag(1)
-                                    Text(UIStrings.text("Twee kolommen")).tag(2)
-                                    Text(UIStrings.text("Drie kolommen")).tag(3)
+                                FocusMenuPicker(UIStrings.text("Layout"), selection: $columns,
+                                                selectedTitle: [0: "Automatic", 1: "One column", 2: "Two columns", 3: "Three columns"][columns] ?? "Automatic") {
+                                    Text(UIStrings.text("Automatic")).tag(0)
+                                    Text(UIStrings.text("One column")).tag(1)
+                                    Text(UIStrings.text("Two columns")).tag(2)
+                                    Text(UIStrings.text("Three columns")).tag(3)
                                 }
                                 .frame(maxWidth: 280).disabled(saving)
                             }
@@ -52,7 +52,7 @@ struct LayoutCorrectionView: View {
                                     readingPreview
                                 }
                             }
-                            Text(UIStrings.text("Opslaan vervangt de tekstindeling. Eerdere analyseresultaten worden ongeldig en de analyse wordt opnieuw gestart."))
+                            Text(UIStrings.text("Saving replaces the text layout. Earlier analysis results become invalid and the analysis restarts."))
                                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,7 +60,7 @@ struct LayoutCorrectionView: View {
                     if let error { Text(UIStrings.text(error)).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
                     ViewThatFits(in: .horizontal) {
                         HStack {
-                            Button(UIStrings.text("Annuleren")) { dismiss() }.disabled(saving).keyboardShortcut(.cancelAction)
+                            Button(UIStrings.text("Cancel")) { dismiss() }.disabled(saving).keyboardShortcut(.cancelAction)
                             Spacer()
                             if saving { ProgressView().controlSize(.small) }
                             saveButton
@@ -68,7 +68,7 @@ struct LayoutCorrectionView: View {
                         VStack(alignment: .trailing, spacing: 8) {
                             if saving { ProgressView().controlSize(.small) }
                             saveButton
-                            Button(UIStrings.text("Annuleren")) { dismiss() }.disabled(saving).keyboardShortcut(.cancelAction)
+                            Button(UIStrings.text("Cancel")) { dismiss() }.disabled(saving).keyboardShortcut(.cancelAction)
                         }
                     }
                 }
@@ -86,7 +86,7 @@ struct LayoutCorrectionView: View {
     }
 
     private var saveButton: some View {
-        Button(UIStrings.text("Bewaren en opnieuw analyseren")) {
+        Button(UIStrings.text("Save and analyze again")) {
                             saving = true
                             Task { @MainActor in
                                 do {
@@ -101,7 +101,7 @@ struct LayoutCorrectionView: View {
 
     private var pagePreview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(UIStrings.text("Sleep optioneel een kader om alleen dat tekstgebied te verwerken.")).font(.caption)
+            Text(UIStrings.text("Optionally drag a box around only the text area to process.")).font(.caption)
             if let image {
                 GeometryReader { container in
                     let scale = min(container.size.width / max(1, imageSize.width),
@@ -136,22 +136,22 @@ struct LayoutCorrectionView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
                 .frame(height: min(imageSize.height, 420))
-                    .accessibilityLabel(UIStrings.text("PDF-pagina \(page) — sleep een kader rond het tekstgebied"))
+                    .accessibilityLabel("PDF page \(page) — drag a box around the text area")
             }
-            Button(UIStrings.text("Hele pagina gebruiken")) { region = nil; updatePreview() }
+            Button(UIStrings.text("Use entire page")) { region = nil; updatePreview() }
                 .disabled(region == nil || saving)
         }
     }
 
     private var readingPreview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(UIStrings.text("Herkende leesvolgorde")).font(.headline)
+            Text(UIStrings.text("Recognized reading order")).font(.headline)
             ScrollView {
                 Text(preview).font(.body).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(minHeight: 180, maxHeight: 420)
-            .accessibilityLabel(UIStrings.text("Voorbeeld van de herkende leesvolgorde"))
+            .accessibilityLabel(UIStrings.text("Recognized reading order preview"))
         }
     }
 
@@ -172,6 +172,6 @@ struct LayoutCorrectionView: View {
         let area = region.map { CGRect(x: bounds.minX + $0.minX * bounds.width, y: bounds.minY + $0.minY * bounds.height, width: $0.width * bounds.width, height: $0.height * bounds.height) }
         let words = PageLayout.words(source).filter { area == nil || area!.contains(CGPoint(x: $0.rect.midX, y: $0.rect.midY)) }
         let reading = PageLayout.order(words, bounds: bounds, columns: columns)
-        preview = reading.text; if !reading.notice.isEmpty { error = reading.notice } else { error = nil }
+        preview = reading.text; if !reading.notice.isEmpty { error = WorkspaceSourceIssue.englishNotice(reading.notice) } else { error = nil }
     }
 }

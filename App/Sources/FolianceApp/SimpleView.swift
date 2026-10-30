@@ -141,7 +141,7 @@ struct SimpleView: View {
                     .padding(.horizontal, 24).padding(.top, 12)
             }
             if compareProgram && workspace.programIdentity == "none" {
-                Text(UIStrings.text("Voeg een referentiedocument toe via Instellingen om documenten te vergelijken."))
+                Text(UIStrings.text("Add a reference document in Settings to compare documents."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             if workspace.showsWelcome { welcome }
@@ -182,7 +182,7 @@ struct SimpleView: View {
                         selectedChartExplanation = nil
                         selectedChart = selected
                     }
-                } else { workspace.error = UIStrings.text("Het diagramgebied kon niet worden gelezen.") }
+                } else { workspace.error = UIStrings.text("The chart area could not be read.") }
             }
         }
         .sheet(item: $selectedChart) { selected in
@@ -204,7 +204,7 @@ struct SimpleView: View {
                         if let image = NSImage(data: chart.imagePNG)?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
                             selectedChartExplanation = chart.explanation
                             selectedChart = SelectedChart(page: chart.page, image: image)
-                        } else { workspace.error = "De bewaarde diagramafbeelding kon niet worden geopend." }
+                        } else { workspace.error = "The saved chart image could not be opened." }
                     }
                 })
         }
@@ -217,14 +217,14 @@ struct SimpleView: View {
         }
         .sheet(isPresented: $showingImportPurpose) {
             VStack(alignment: .leading, spacing: 20) {
-                Text(UIStrings.text("Nieuwe PDF voorbereiden")).font(.title2.bold())
+                Text(UIStrings.text("Prepare a new PDF")).font(.title2.bold())
                 importPurposePicker
-                Text(UIStrings.text("Foliance leest de PDF voordat de analyse start. Een gekozen profiel kan een gerichte beoordeling toevoegen."))
+                Text(UIStrings.text("Foliance reads the PDF before starting analysis. A selected profile may add a focused review."))
                     .font(.callout).foregroundStyle(.secondary)
                 HStack {
-                    Button(UIStrings.text("Annuleer")) { showingImportPurpose = false }
+                    Button(UIStrings.text("Cancel")) { showingImportPurpose = false }
                     Spacer()
-                    Button(UIStrings.text("Kies PDF…")) {
+                    Button(UIStrings.text("Choose PDF…")) {
                         pendingImportPurpose = importPurpose
                         showingImportPurpose = false
                         Task { @MainActor in await Task.yield(); importing = true }
@@ -314,21 +314,21 @@ struct SimpleView: View {
 
     private var alertContent: some View {
         eventObservedContent
-        .alert(UIStrings.text("Melding"), isPresented: errorAlertBinding) {
+        .alert(UIStrings.text("Notice"), isPresented: errorAlertBinding) {
             Button(UIStrings.text("OK")) { workspace.error = nil }
         } message: { Text(UIStrings.text(workspace.error ?? "")) }
-        .confirmationDialog(UIStrings.text("Niet-bewaarde wijzigingen"), isPresented: pendingActionDialogBinding, titleVisibility: .visible) {
-            Button(UIStrings.text("Bewaar en ga door")) { saveThenContinue() }
+        .confirmationDialog(UIStrings.text("Unsaved changes"), isPresented: pendingActionDialogBinding, titleVisibility: .visible) {
+            Button(UIStrings.text("Save and continue")) { saveThenContinue() }
                 .disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting || workspace.document == nil)
-            Button(UIStrings.text("Verwerp wijzigingen"), role: .destructive) { performPendingAction() }
-            Button(UIStrings.text("Annuleer"), role: .cancel) { cancelPendingAction() }
+            Button(UIStrings.text("Discard changes"), role: .destructive) { performPendingAction() }
+            Button(UIStrings.text("Cancel"), role: .cancel) { cancelPendingAction() }
         } message: {
-            Text(UIStrings.text("Deze actie vervangt of sluit het huidige werkdocument."))
+            Text(UIStrings.text("This action will replace or close the current workspace."))
         }
     }
 
     private var importPurposePicker: some View {
-        FocusMenuPicker(UIStrings.text("Voorbereiden voor"), selection: $importPurpose,
+        FocusMenuPicker(UIStrings.text("Prepare for"), selection: $importPurpose,
                         selectedTitle: UIStrings.text(importPurpose.title)) {
             ForEach(MeetingPurpose.allCases, id: \.self) { purpose in
                 Text(UIStrings.text(purpose.title)).tag(purpose)
@@ -341,25 +341,25 @@ struct SimpleView: View {
         ScrollView {
         VStack(spacing: 20) {
             Image(nsImage: Bundle.main.url(forResource: "Foliance", withExtension: "icns").flatMap { NSImage(contentsOf: $0) } ?? NSApplication.shared.applicationIconImage).resizable().scaledToFit().frame(width: 64, height: 64)
-            Text(UIStrings.text("Welkom bij Foliance")).font(.system(size: 30, weight: .semibold))
-            Text(UIStrings.text("Een helder overzicht om PDF’s te lezen en te controleren.")).font(.title3).foregroundStyle(.secondary)
+            Text(UIStrings.text("Welcome to Foliance")).font(.system(size: 30, weight: .semibold))
+            Text(UIStrings.text("A clear workspace for reading and reviewing PDFs.")).font(.title3).foregroundStyle(.secondary)
             Text(UIStrings.text(AIConfiguration.label(AIConfiguration.selectedModel)))
                 .font(.caption).foregroundStyle(.secondary)
             if let reason = appleUnavailable {
                 Label(UIStrings.text(reason), systemImage: "info.circle").font(.callout)
-                Text(UIStrings.text("Je kunt de PDF openen, lezen en lokaal doorzoeken.")).font(.caption).foregroundStyle(.secondary)
+                Text(UIStrings.text("You can open, read and search the PDF locally.")).font(.caption).foregroundStyle(.secondary)
             }
             importPurposePicker
             PDFImportCard(busy: workspace.busy, targeted: targeted,
                           addPDF: { requestWorkspaceAction(.choosePDF) })
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: targeted)
                 .dropDestination(for: URL.self) { urls, _ in pendingImportPurpose = importPurpose; requestWorkspaceAction(.importPDF(urls)); return true } isTargeted: { targeted = $0 }
-            Button(UIStrings.text("Werkdocument openen…"), systemImage: "folder") { requestWorkspaceAction(.openWorkspace) }
+            Button(UIStrings.text("Open workspace…"), systemImage: "folder") { requestWorkspaceAction(.openWorkspace) }
                 .buttonStyle(QuietActionStyle()).disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting)
             if !recentDocuments.entries.isEmpty { recentWorkspaces }
-            if workspace.busy { Text(UIStrings.text("Verwerking stoppen…")).font(.callout).foregroundStyle(.secondary) }
+            if workspace.busy { Text(UIStrings.text("Stop processing…")).font(.callout).foregroundStyle(.secondary) }
             if workspace.document != nil {
-                Button(UIStrings.text("Terug naar huidige pdf")) { workspace.showsWelcome = false }.disabled(workspace.busy)
+                Button(UIStrings.text("Return to current PDF")) { workspace.showsWelcome = false }.disabled(workspace.busy)
             }
         }.frame(maxWidth: 540).padding(32).frame(maxWidth: .infinity).frame(minHeight: geometry.size.height)
         }
@@ -378,51 +378,51 @@ struct SimpleView: View {
         ToolbarItemGroup(placement: .primaryAction) {
             if !workspace.processingPresented {
             if !workspace.showsWelcome {
-                Button(UIStrings.text("Nieuwe pdf"), systemImage: "plus") { requestWorkspaceAction(.choosePDF) }
-                    .help(UIStrings.text("Nieuwe pdf openen")).disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting)
+                Button(UIStrings.text("New PDF"), systemImage: "plus") { requestWorkspaceAction(.choosePDF) }
+                    .help(UIStrings.text("Open a new PDF")).disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting)
                     .buttonStyle(FocusToolbarActionStyle())
-                Button(UIStrings.text("Analyseopties"), systemImage: "slider.horizontal.3") {
+                Button(UIStrings.text("Analysis options"), systemImage: "slider.horizontal.3") {
                     chatPresentation = nil; section = .overview; showingAnalysisOptions.toggle()
                     if showingAnalysisOptions { pendingScrollID = "summary-root" }
                 }.buttonStyle(FocusToolbarActionStyle())
-                Button(UIStrings.text("Documentchat"), systemImage: "bubble.left.and.bubble.right") { openChat(pages: Array(1...(workspace.document?.pages.count ?? 1)), wholeDocument: true) }
+                Button(UIStrings.text("Document chat"), systemImage: "bubble.left.and.bubble.right") { openChat(pages: Array(1...(workspace.document?.pages.count ?? 1)), wholeDocument: true) }
                     .disabled(workspace.busy).buttonStyle(FocusToolbarActionStyle())
-                Button(UIStrings.text(section == .selection ? "Exporteer mijn selectie" : "Exporteren"), systemImage: "square.and.arrow.up") { showingExport = true }
-                    .disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting || workspace.document == nil).help(UIStrings.text("Kies welke onderdelen je wilt exporteren"))
+                Button(section == .selection ? "Export My selection" : "Export", systemImage: "square.and.arrow.up") { showingExport = true }
+                    .disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting || workspace.document == nil).help(UIStrings.text("Choose which sections to export"))
                     .buttonStyle(FocusToolbarActionStyle())
             }
             Menu {
-                Button(UIStrings.text("Werkdocument openen…")) { requestWorkspaceAction(.openWorkspace) }
-                Button(UIStrings.text("Werkdocument bewaren…")) { saveWorkspace() }.disabled(workspace.document == nil)
+                Button(UIStrings.text("Open workspace…")) { requestWorkspaceAction(.openWorkspace) }
+                Button(UIStrings.text("Save workspace…")) { saveWorkspace() }.disabled(workspace.document == nil)
             } label: {
                 let dirty = workspace.document != nil && workspace.hasUnsavedChanges
                 HStack(spacing: 6) {
                     Image(systemName: "folder")
-                    Text(UIStrings.text("Werkdocument"))
+                    Text(UIStrings.text("Work document"))
                     if dirty {
                         Circle().fill(SPTheme.accent).frame(width: 6, height: 6)
                             .accessibilityHidden(true)
                     }
                 }.foregroundStyle(Color.primary)
             }
-                .accessibilityLabel(UIStrings.text("Werkdocument"))
-                .accessibilityValue(UIStrings.text(workspace.document != nil && workspace.hasUnsavedChanges ? "Niet-bewaarde wijzigingen" : "Geen niet-bewaarde wijzigingen"))
-                .help(UIStrings.text("Werkdocument openen of bewaren. ⌘⇧O opent; ⌘S bewaart."))
+                .accessibilityLabel(UIStrings.text("Work document"))
+                .accessibilityValue(workspace.document != nil && workspace.hasUnsavedChanges ? "Unsaved changes" : "No unsaved changes")
+                .help(UIStrings.text("Open or save a work document. ⌘⇧O opens; ⌘S saves."))
                 .disabled(workspace.busy || workspace.committeeReviewBusy || workspace.exporting)
                 .focusToolbarMenu()
             Menu {
                 if !workspace.showsWelcome {
-                    Button(UIStrings.text("Vergelijk punten"), systemImage: "rectangle.split.2x1") { showingComparison = true }
+                    Button(UIStrings.text("Compare findings"), systemImage: "rectangle.split.2x1") { showingComparison = true }
                         .disabled(workspace.busy || workspace.organizedInsights.count < 2)
                 }
-                Button(UIStrings.text("Rondleiding"), systemImage: "questionmark.circle") { showingTutorial = true }
-                    .help(UIStrings.text("Bekijk de rondleiding"))
+                Button(UIStrings.text("Tour"), systemImage: "questionmark.circle") { showingTutorial = true }
+                    .help(UIStrings.text("View the tour"))
             } label: {
-                Label(UIStrings.text("Hulpmiddelen"), systemImage: "ellipsis.circle").foregroundStyle(Color.primary)
+                Label(UIStrings.text("Tools"), systemImage: "ellipsis.circle").foregroundStyle(Color.primary)
             }
-            .accessibilityLabel(UIStrings.text("Hulpmiddelen"))
+            .accessibilityLabel(UIStrings.text("Tools"))
             .focusToolbarMenu()
-            Button(UIStrings.text("Instellingen"), systemImage: "gearshape") { showingSettings = true }
+            Button(UIStrings.text("Settings"), systemImage: "gearshape") { showingSettings = true }
                 .keyboardShortcut(",", modifiers: .command)
                 .buttonStyle(FocusToolbarActionStyle())
             }
@@ -444,7 +444,7 @@ struct SimpleView: View {
     }
 
     private var analysisControls: some View {
-        AnalysisControlRow(workspace: workspace, disabled: selectionSummary.busy || (workspace.committeeReviewBusy && !workspace.importCommitteeReviewActive) || workspace.exporting, stopTitle: "Stop en behoud resultaten", showsCompletionSummary: false) {
+        AnalysisControlRow(workspace: workspace, disabled: selectionSummary.busy || (workspace.committeeReviewBusy && !workspace.importCommitteeReviewActive) || workspace.exporting, stopTitle: "Stop and keep results", showsCompletionSummary: false) {
                     if workspace.busy { workspace.cancelAnalysis() }
                     else if workspace.canResume { workspace.resumeMissing() }
                     else { workspace.analyze(model: AIConfiguration.selectedModel, context: focus.prompt, selection: workspace.requestedSelection, compareProgram: compareProgram) }
@@ -453,19 +453,19 @@ struct SimpleView: View {
 
     private var readingControls: some View {
         HStack(spacing: 6) {
-            Button(UIStrings.text("Analyseoverzicht"), systemImage: "list.bullet.clipboard") { showingAnalysisOverview.toggle() }
-                    .help(UIStrings.text("Toon of verberg de voortgang en herstelacties van de analyse"))
-                    .accessibilityValue(UIStrings.text(showingAnalysisOverview ? "Uitgeklapt" : "Ingeklapt"))
-                Button(UIStrings.text(showPDFPane ? "PDF inklappen" : "PDF tonen"), systemImage: "sidebar.right") { if showPDFPane { workspace.page = pdfControls.page }; showPDFPane.toggle() }
-                    .help(UIStrings.text(showPDFPane ? "PDF inklappen" : "PDF tonen"))
+            Button(UIStrings.text("Analysis status"), systemImage: "list.bullet.clipboard") { showingAnalysisOverview.toggle() }
+                    .help(UIStrings.text("Show or hide analysis progress and recovery actions"))
+                .accessibilityValue(showingAnalysisOverview ? "Expanded" : "Collapsed")
+                Button(showPDFPane ? "Hide PDF panel" : "Show PDF panel", systemImage: "sidebar.right") { if showPDFPane { workspace.page = pdfControls.page }; showPDFPane.toggle() }
+                    .help(showPDFPane ? "Hide PDF panel" : "Show PDF panel")
                 Menu {
-                    Button(UIStrings.text("Afkortingen"), systemImage: "character.book.closed") { glossarySearch = ""; showingGlossary = true }
+                    Button(UIStrings.text("Abbreviations"), systemImage: "character.book.closed") { glossarySearch = ""; showingGlossary = true }
                     if !workspace.savedChatThreads.isEmpty || !workspace.savedChartAnalyses.isEmpty || !workspace.savedSelectionSummaries.isEmpty {
-                        Button(UIStrings.text("Bewaarde antwoorden"), systemImage: "clock.arrow.circlepath") { showingSavedExtras = true }
+                        Button(UIStrings.text("Saved answers"), systemImage: "clock.arrow.circlepath") { showingSavedExtras = true }
                     }
-                    Button(UIStrings.text("Tekstindeling"), systemImage: "rectangle.split.2x1") { showingLayout = true }.disabled(workspace.busy)
-                } label: { Label(UIStrings.text("Leesopties"), systemImage: "ellipsis").foregroundStyle(Color.primary) }
-                    .help(UIStrings.text("Afkortingen en tekstindeling"))
+                    Button(UIStrings.text("Text layout"), systemImage: "rectangle.split.2x1") { showingLayout = true }.disabled(workspace.busy)
+                } label: { Label(UIStrings.text("Reading options"), systemImage: "ellipsis").foregroundStyle(Color.primary) }
+                    .help(UIStrings.text("Abbreviations and text layout"))
                     .lineLimit(1)
                     .focusToolbarMenu()
         }
@@ -481,7 +481,7 @@ struct SimpleView: View {
             }
             .controlSize(.regular)
             .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 2)
-            if showingAnalysisOptions && compareProgram { Button(UIStrings.text("Focus aanpassen"), systemImage: "slider.horizontal.3") { showingFocus = true }.disabled(workspace.busy).padding(.horizontal, 24) }
+            if showingAnalysisOptions && compareProgram { Button(UIStrings.text("Edit focus"), systemImage: "slider.horizontal.3") { showingFocus = true }.disabled(workspace.busy).padding(.horizontal, 24) }
             if let document = workspace.document {
                 WorkspaceStatusBanner(workspace: workspace, showingAnalysisOverview: $showingAnalysisOverview,
                     showPage: { showPDFPage($0) },
@@ -513,7 +513,7 @@ struct SimpleView: View {
                                     if section == destination { Capsule().fill(SPTheme.accent).frame(height: 2).padding(.horizontal, 12).padding(.bottom, 1).accessibilityHidden(true) }
                                 }
                         }.buttonStyle(.plain).accessibilityAddTraits(section == destination ? .isSelected : [])
-                            .accessibilityValue(section == destination ? UIStrings.text("Geselecteerd") : UIStrings.text("Niet geselecteerd"))
+                            .accessibilityValue(section == destination ? UIStrings.text("Selected") : UIStrings.text("Not selected"))
                     }
                     Spacer(minLength: 0)
                 }.padding(.horizontal, 24).padding(.bottom, 6)
@@ -531,7 +531,7 @@ struct SimpleView: View {
                             }
                             if section == .overview {
                             if !workspace.savedChatThreads.isEmpty || !workspace.savedChartAnalyses.isEmpty || !workspace.savedSelectionSummaries.isEmpty {
-                                Button(UIStrings.text("Bewaarde antwoorden"), systemImage: "clock.arrow.circlepath") { showingSavedExtras = true }
+                                Button(UIStrings.text("Saved answers"), systemImage: "clock.arrow.circlepath") { showingSavedExtras = true }
                                     .buttonStyle(FocusSecondaryButtonStyle()).padding(.horizontal, 24)
                             }
                             SummaryCard(workspace: workspace, model: AIConfiguration.selectedModel, showsOptions: showingAnalysisOptions,
@@ -539,7 +539,7 @@ struct SimpleView: View {
                                 .id("summary-root")
                             sourceHighlightsCard
                             if overviewAnalysisIncomplete {
-                                Text(UIStrings.text("Analyse niet afgerond: beschikbare punten kunnen onvolledig zijn."))
+                                Text(UIStrings.text("Analysis is incomplete: available findings may be partial."))
                                     .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20)
                             }
                             readingAgendaCard
@@ -549,20 +549,20 @@ struct SimpleView: View {
                             coverageCard
                             ForEach(workspace.tables.filter { $0.isOCRConfirmed && $0.ocrReview?.summary != nil }) { table in
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text(UIStrings.text("Gecontroleerde tabelgegevens")).font(.title3.weight(.semibold))
+                                    Text(UIStrings.text("Reviewed table data")).font(.title3.weight(.semibold))
                                     if let digest = table.ocrReview?.summary {
                                         Text(digest.overview).font(.caption).foregroundStyle(.secondary)
                                         ForEach(Array(digest.bullets.enumerated()), id: \.offset) { _, fact in Text("• " + fact).textSelection(.enabled) }
                                     }
                                     ForEach(table.pages, id: \.self) { page in
-                                        Button(UIStrings.text("Toon in PDF · p. \(page)")) { showPDFPage(page) }.buttonStyle(FocusSecondaryButtonStyle())
+                                        Button(UIStrings.text("Show in PDF · p. \(page)")) { showPDFPage(page) }.buttonStyle(FocusSecondaryButtonStyle())
                                     }
                                 }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
                                     .readingSurface()
                             }
                             }
                             if section == .tables {
-                            if workspace.tables.isEmpty { Text(UIStrings.text("Geen tabellen met voldoende herkenbare structuur gevonden. OCR ondersteunt afbeeldingstabellen met duidelijke rasterlijnen. Bekijk overige tabellen in de PDF.")).padding(24) }
+                            if workspace.tables.isEmpty { Text(UIStrings.text("No tables with enough recognizable structure were found. OCR supports image tables with clear grid lines. Check other tables in the PDF.")).padding(24) }
                             TableExplanationView(tables: workspace.tables, showPage: { showPDFPage($0) }, tutorialExpanded: true,
                                 sourceData: workspace.document?.data, saveReview: workspace.saveReviewedTable,
                                 analyzeReview: { workspace.analyzeReviewedTable(id: $0, model: AIConfiguration.selectedModel) },
@@ -586,18 +586,18 @@ struct SimpleView: View {
                                     withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) { pointsExpanded.toggle() }
                                 } label: {
                                     HStack {
-                                Text(UIStrings.text(section == .selection ? "Mijn selectie" : (workspace.analyzed ? workspace.neutralAnalysis : !compareProgram) ? "Alineapunten" : "Aandachtspunten")).font(.system(size: 26, weight: .semibold))
+                                Text(section == .selection ? "My selection" : (workspace.analyzed ? workspace.neutralAnalysis : !compareProgram) ? "Findings" : "Profile findings").font(.system(size: 26, weight: .semibold))
                                         Spacer()
                                         Image(systemName: "chevron.down").rotationEffect(.degrees(pointsExpanded ? 180 : 0))
                                     }.contentShape(Rectangle())
-                                }.buttonStyle(.plain).accessibilityValue(UIStrings.text(pointsExpanded ? "Uitgeklapt" : "Ingeklapt"))
+                                    }.buttonStyle(.plain).accessibilityValue(pointsExpanded ? "Expanded" : "Collapsed")
                                 Spacer(minLength: 0)
                                 if compareProgram && showingAnalysisOptions { Button(UIStrings.text("Focus"), systemImage: "slider.horizontal.3") { showingFocus = true }
-                                    .help(UIStrings.text("Aandachtspunten aanpassen")).disabled(workspace.busy) }
+                                    .help(UIStrings.text("Edit focus")).disabled(workspace.busy) }
                             }
                             if pointsExpanded {
                             if section == .points {
-                                FocusMenuPicker(UIStrings.text("Voorbereiden voor"),
+                                FocusMenuPicker(UIStrings.text("Prepare for"),
                                                 selection: Binding(get: { workspace.meetingPurpose }, set: { workspace.setMeetingPurpose($0) }),
                                                 selectedTitle: UIStrings.text(workspace.meetingPurpose.title)) {
                                     ForEach(MeetingPurpose.allCases, id: \.self) { purpose in
@@ -610,34 +610,34 @@ struct SimpleView: View {
                                 HStack { pointFilters }
                                 VStack(alignment: .leading) { pointFilters }
                             }
-                            if !pointPageFilter.isEmpty, (try? PageScope.parse(pointPageFilter, count: document.pages.count)) == nil { Text(UIStrings.text("Voer geldige pagina’s in, bijvoorbeeld 3–7, 12.")).font(.caption).foregroundStyle(.orange) }
+                            if !pointPageFilter.isEmpty, (try? PageScope.parse(pointPageFilter, count: document.pages.count)) == nil { Text(UIStrings.text("Enter valid pages, for example 3–7, 12.")).font(.caption).foregroundStyle(.orange) }
                             if section == .points && workspace.meetingPurpose != .raad {
                                 committeeReviewView(for: workspace.meetingPurpose)
                             } else {
                             let featuredCount = workspace.featuredInsightGroups.reduce(0) { $0 + $1.points.count }
                             let allCount = workspace.organizedInsights.count
                             if section == .points {
-                                FocusChoiceTabs(UIStrings.text("Toon punten"), selection: $pointsMode, options: [
-                                    FocusChoiceOption(value: PointsViewMode.featured, title: UIStrings.text("Belangrijkste"), count: featuredCount),
-                                    FocusChoiceOption(value: PointsViewMode.all, title: UIStrings.text("Alle punten"), count: allCount)
+                                FocusChoiceTabs(UIStrings.text("Show points"), selection: $pointsMode, options: [
+                                    FocusChoiceOption(value: PointsViewMode.featured, title: UIStrings.text("Most important"), count: featuredCount),
+                                    FocusChoiceOption(value: PointsViewMode.all, title: UIStrings.text("All points"), count: allCount)
                                 ])
                                 .frame(maxWidth: 640)
                             }
                             if pointsMode == .featured && allCount > featuredCount {
-                                Text(UIStrings.text("Automatische kernselectie. Alle punten blijven beschikbaar onder ‘Alle punten’."))
+                                Text(UIStrings.text("Automatically selected key points. Every point remains available under ‘All points’."))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             if compareProgram && showingAnalysisOptions {
                             Label(workspace.programName, systemImage: "text.book.closed").font(.callout)
-                            Text(UIStrings.text("Documentdelen worden met geselecteerde programmapassages vergeleken. Indirecte verbanden kunnen ontbreken.")).font(.caption).foregroundStyle(.secondary)
-                            Text(focus.prompt.isEmpty ? UIStrings.text("Geen aanvullende aandachtspunten ingesteld.") : focus.prompt)
+                            Text(UIStrings.text("Document sections are compared with selected programme passages. Indirect links may be missed.")).font(.caption).foregroundStyle(.secondary)
+                            Text(focus.prompt.isEmpty ? UIStrings.text("No additional focus set.") : focus.prompt)
                                 .font(.callout).foregroundStyle(.secondary)
                             }
                             if workspace.analyzed && !workspace.neutralAnalysis && (workspace.analysisContext != focus.prompt || workspace.programChanged) {
-                                Text(UIStrings.text("Leesdoel of referentiedocument gewijzigd. Klik op Analyseer om de resultaten te vernieuwen.")).font(.caption).foregroundStyle(.orange)
+                                Text(UIStrings.text("Reading goal or reference document changed. Click Analyze to refresh the results.")).font(.caption).foregroundStyle(.orange)
                             }
                             if workspace.analyzed && workspace.neutralAnalysis == compareProgram {
-                                Text(UIStrings.text("Modus gewijzigd. Klik op Analyseer om de punten te vernieuwen.")).font(.caption).foregroundStyle(.orange)
+                            Text("Mode changed. Click Analyze to refresh the findings.").font(.caption).foregroundStyle(.orange)
                             }
                             if workspace.analyzed {
                                 Text(UIStrings.text(workspace.analysisScope)).font(.caption.bold())
@@ -650,18 +650,18 @@ struct SimpleView: View {
                                 }
                                 let orderedSelection = workspace.selectedInsightsInOrder.filter { matchesPoint($0, pages: allowedPages) }
                                 let groups = pointsMode == .mine
-                                    ? (orderedSelection.isEmpty ? [] : [InsightGroup(title: "Mijn selectie", description: "Punten in jouw volgorde.", points: orderedSelection)])
+                                    ? (orderedSelection.isEmpty ? [] : [InsightGroup(title: "My selection", description: "Findings in your chosen order.", points: orderedSelection)])
                                     : groupedMatches
                                 let totalByGroup = Dictionary(uniqueKeysWithValues: workspace.insightGroups.map { ($0.id, $0.points.count) })
                                 if groups.isEmpty {
                                     let onlyBackground = pointsMode == .featured && pointPageFilter.isEmpty && reviewFilter == 0
                                         && !workspace.insightGroups.isEmpty
                                         && workspace.insightGroups.flatMap(\.points).allSatisfy { $0.relevanceClass == "background" }
-                                    let emptyMessage = onlyBackground ? "Geen hoofdpunten in deze selectie. Bekijk de achtergrond bij Alle punten."
-                                        : (!pointPageFilter.isEmpty || reviewFilter != 0) ? "Geen punten voor deze filters."
-                                        : pointsMode == .mine && workspace.chosenPassages.isEmpty ? "Nog geen punten in je selectie. Gebruik de ster bij een aandachtspunt."
-                                        : pointsMode == .mine ? "De zelf gekozen passages staan hierboven. Er zijn geen AI-punten in Mijn selectie."
-                                        : workspace.analysisState.rawValue
+                                    let emptyMessage = onlyBackground ? "No featured findings in this view. Check all findings for more detail."
+                                        : (!pointPageFilter.isEmpty || reviewFilter != 0) ? "No findings match these filters."
+                                        : pointsMode == .mine && workspace.chosenPassages.isEmpty ? "Your selection is empty. Use the star on a finding to add it."
+                                        : pointsMode == .mine ? "Your selected passages are above. There are no AI findings in My selection."
+                                        : workspace.analysisState.englishTitle
                                     Text(UIStrings.text(emptyMessage)).foregroundStyle(.secondary)
                                 }
                                 VStack(alignment: .leading, spacing: 16) {
@@ -681,7 +681,7 @@ struct SimpleView: View {
                                         }
                                     } label: {
                                         HStack(spacing: 12) {
-                                            Text(group.title + " · " + (pointsMode == .mine ? "\(group.points.count) " + UIStrings.text("geselecteerd") : pointsMode == .featured ? "\(group.points.count) " + UIStrings.text("van") + " \(totalByGroup[group.id, default: group.points.count])" : "\(group.points.count)"))
+                                            Text(group.title + " · " + (pointsMode == .mine ? "\(group.points.count) " + UIStrings.text("selected") : pointsMode == .featured ? "\(group.points.count) " + UIStrings.text("of") + " \(totalByGroup[group.id, default: group.points.count])" : "\(group.points.count)"))
                                                 .font(.subheadline.weight(.semibold))
                                                 .foregroundStyle(.secondary)
                                             Spacer(minLength: 12)
@@ -694,8 +694,8 @@ struct SimpleView: View {
                                         .contentShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
-                                    .accessibilityValue(UIStrings.text(openGroups.contains(group.id) ? "Uitgeklapt" : "Ingeklapt"))
-                                    .accessibilityHint(UIStrings.text("Vouw de categorie uit of in"))
+                                    .accessibilityValue(openGroups.contains(group.id) ? "Expanded" : "Collapsed")
+                                    .accessibilityHint(UIStrings.text("Expand or collapse the category"))
                                     if openGroups.contains(group.id) {
                                         LazyVStack(alignment: .leading, spacing: 0) {
                                         Text(UIStrings.text(group.description)).font(.caption).foregroundStyle(.secondary).padding(.vertical, 8)
@@ -719,7 +719,7 @@ struct SimpleView: View {
                                 }
                                 }
                             } else if section != .selection || workspace.chosenPassages.isEmpty {
-                                Text(UIStrings.text(workspace.analysisState.rawValue)).foregroundStyle(.secondary)
+                                Text(UIStrings.text(workspace.analysisState.englishTitle)).foregroundStyle(.secondary)
                             }
                             }
                             }
@@ -818,7 +818,7 @@ struct SimpleView: View {
                         }
                         .overlay(alignment: .topLeading) {
                             if selectingChart {
-                                Text(UIStrings.text("Sleep een kader om het diagram, inclusief titel en legenda"))
+                                Text(UIStrings.text("Drag a box around the chart, including its title and legend"))
                                     .font(.caption.bold()).padding(10)
                                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
                                     .padding(12).allowsHitTesting(false)
@@ -826,11 +826,11 @@ struct SimpleView: View {
                         }
                         .overlay(alignment: .topTrailing) {
                             Menu {
-                                Button(UIStrings.text(selectingChart ? "Annuleer selectie" : "Diagram selecteren")) {
+                Button(selectingChart ? "Cancel selection" : "Select chart") {
                                     selectingChart.toggle(); chartDragStart = nil; chartDragEnd = nil; pdfControls.selectedText = nil
                                 }
-                                Button(UIStrings.text("Diagramgebied invoeren…")) { selectingChart = false; showingChartArea = true }
-                            } label: { Label(UIStrings.text("Diagram"), systemImage: "chart.bar.xaxis").foregroundStyle(Color.primary) }
+                                Button(UIStrings.text("Enter chart area…")) { selectingChart = false; showingChartArea = true }
+                            } label: { Label(UIStrings.text("Chart"), systemImage: "chart.bar.xaxis").foregroundStyle(Color.primary) }
                             .focusMenu().fixedSize()
                             .padding(8).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
                             .padding(12)
@@ -862,20 +862,20 @@ struct SimpleView: View {
         let card: AnyView
         if entries.isEmpty {
             let message = overviewAnalysisIncomplete
-                ? "Er zijn nog geen punten voor de leesagenda; de verwerking is niet afgerond en het overzicht kan onvolledig zijn."
-                : "Er zijn geen punten beschikbaar voor de leesagenda."
+                ? "No findings are available for the reading agenda yet. Processing is incomplete, so the overview may be partial."
+                : "No findings are available for the reading agenda."
             card = AnyView(Text(UIStrings.text(message)).font(.callout).foregroundStyle(.secondary))
         } else {
             card = AnyView(DisclosureGroup(isExpanded: $readingAgendaExpanded) {
             VStack(alignment: .leading, spacing: 14) {
-            Text(UIStrings.text("Snelle route door bestaande punten. De teksten en bronnen blijven per punt staan."))
+            Text(UIStrings.text("A quick route through existing findings. Each finding keeps its own text and sources."))
                 .font(.caption).foregroundStyle(.secondary)
             ForEach(populatedCategories) { category in
                 var seenCategoryPointIDs = Set<String>()
                 let matches = entries.filter { $0.category == category && seenCategoryPointIDs.insert($0.point.id).inserted }
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(UIStrings.text(category.rawValue)).font(.headline)
-                        Text(UIStrings.text("Punten") + " · \(matches.count)")
+                    Text(readingAgendaCategoryTitle(category)).font(.headline)
+                        Text(UIStrings.text("Points") + " · \(matches.count)")
                             .font(.caption).foregroundStyle(.secondary)
                         ForEach(matches.prefix(3)) { entry in
                             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -889,7 +889,7 @@ struct SimpleView: View {
                             }
                         }
                         if matches.count > 3 {
-                            Button(UIStrings.text("Alle documentpunten openen")) {
+                            Button(UIStrings.text("Open all document findings")) {
                                 section = .points; pointsMode = .all; pointsExpanded = true
                                 if workspace.meetingPurpose != .raad { committeeShowAll[workspace.meetingPurpose.rawValue] = true }
                                 pointPageFilter = ""; reviewFilter = 0
@@ -900,7 +900,7 @@ struct SimpleView: View {
             }
         } label: {
             HStack {
-                Text(UIStrings.text("Leesagenda")).font(.title3.weight(.semibold))
+                Text(UIStrings.text("Reading agenda")).font(.title3.weight(.semibold))
                 Spacer()
                 Text("\(uniquePointCount)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
@@ -912,23 +912,23 @@ struct SimpleView: View {
     private func selectionPointRow(_ point: Insight, index: Int, count: Int) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                FocusMenuPicker(UIStrings.text("Vergaderstatus"), selection: Binding(
+                FocusMenuPicker(UIStrings.text("Review status"), selection: Binding(
                     get: { workspace.meetingStatus(for: point) },
                     set: { workspace.setMeetingStatus($0, for: point) }
-                ), selectedTitle: UIStrings.text(workspace.meetingStatus(for: point).rawValue)) {
+                ), selectedTitle: meetingStatusLabel(workspace.meetingStatus(for: point))) {
                     ForEach(SelectionMeetingStatus.allCases, id: \.self) { status in
-                        Text(UIStrings.text(status.rawValue)).tag(status)
+                        Text(meetingStatusLabel(status)).tag(status)
                     }
                 }.frame(maxWidth: 220)
-                    .accessibilityLabel(UIStrings.text("Vergaderstatus voor \(point.title)"))
+                    .accessibilityLabel("Review status for \(point.title)")
                 Button { workspace.moveSelected(point, by: -1) } label: { Image(systemName: "arrow.up") }
                     .buttonStyle(FocusSecondaryButtonStyle()).controlSize(.small).disabled(index == 0)
-                    .help(UIStrings.text("Punt omhoog verplaatsen"))
-                    .accessibilityLabel(UIStrings.text("Punt omhoog verplaatsen"))
+                    .help(UIStrings.text("Move finding up"))
+                    .accessibilityLabel(UIStrings.text("Move finding up"))
                 Button { workspace.moveSelected(point, by: 1) } label: { Image(systemName: "arrow.down") }
                     .buttonStyle(FocusSecondaryButtonStyle()).controlSize(.small).disabled(index == count - 1)
-                    .help(UIStrings.text("Punt omlaag verplaatsen"))
-                    .accessibilityLabel(UIStrings.text("Punt omlaag verplaatsen"))
+                    .help(UIStrings.text("Move finding down"))
+                    .accessibilityLabel(UIStrings.text("Move finding down"))
                 Spacer(minLength: 0)
             }
             insightCard(point)
@@ -954,7 +954,7 @@ struct SimpleView: View {
                     explain: {
                         pdfControls.pin(.init(id: point.id, page: point.page, quote: point.quote))
                         openChat(pages: [point.page], wholeDocument: false, passage: point.quote,
-                                 question: "Leg deze passage eenvoudig uit. Wat staat er concreet en wat blijft onduidelijk?")
+                                 question: "Explain this passage in plain English. What does it state, and what remains unclear?")
                     }).id(point.id)
     }
 
@@ -962,47 +962,47 @@ struct SimpleView: View {
         let coverage = workspace.documentCoverage
         return DisclosureGroup(isExpanded: $showingCoverage) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(UIStrings.text("Fysieke PDF-pagina’s: \(coverage.totalPages)"))
-                Text(UIStrings.text("Pagina’s met leesbare tekst: \(coverage.readablePages) van \(coverage.totalPages)"))
+                Text("Physical PDF pages: \(coverage.totalPages)")
+                Text("Pages with readable text: \(coverage.readablePages) of \(coverage.totalPages)")
                 switch coverage.analysis {
                 case .complete(let count):
-                    Text(UIStrings.text("Succesvol afgeronde analyse-scope: \(count) leesbare pagina’s."))
+                    Text("Analysis completed successfully for \(count) readable \(count == 1 ? "page" : "pages").")
                     if let pages = coverage.completedAnalysisPageNumbers, !pages.isEmpty {
-                        Text(UIStrings.text("Afgeronde pagina’s:" )).font(.caption.weight(.semibold))
-                        pageLinks(pages, label: "Analyse")
+                        Text(UIStrings.text("Completed pages:" )).font(.caption.weight(.semibold))
+                        pageLinks(pages, label: "Analyzed")
                     }
                 case .partial:
-                    Text(UIStrings.text("Analyse gedeeltelijk; het aantal afgeronde delen is onbekend."))
+                    Text(UIStrings.text("Analysis is partial; the number of completed sections is unknown."))
                         .foregroundStyle(.orange)
                 case .unknown:
-                    Text(UIStrings.text("Analysevolledigheid onbekend; er is geen geslaagde analyse-scope bewaard."))
+                    Text(UIStrings.text("Analysis completeness is unknown; no successfully completed analysis scope was saved."))
                         .foregroundStyle(.secondary)
                 }
                 if !coverage.unreadablePageNumbers.isEmpty {
-                    Text(UIStrings.text("Pagina’s zonder leesbare tekst:" )).font(.caption.weight(.semibold))
-                    pageLinks(coverage.unreadablePageNumbers, label: "Geen leesbare tekst")
+                    Text(UIStrings.text("Pages without readable text:" )).font(.caption.weight(.semibold))
+                    pageLinks(coverage.unreadablePageNumbers, label: "No readable text")
                 }
                 Divider()
-                Text(UIStrings.text("Afbeeldingstabellen: \(coverage.confirmedOCRTables) door jou aan de bron bevestigd · \(coverage.unconfirmedOCRTables) nog niet bevestigd."))
+                Text("Image-based tables: \(coverage.confirmedOCRTables) checked against the source · \(coverage.unconfirmedOCRTables) not yet checked.")
                 ForEach(coverage.unconfirmedOCRTableIDs, id: \.self) { id in
                     if let table = workspace.tables.first(where: { $0.id == id }) {
-                        Button(UIStrings.text("Controleer \(table.title) · PDF-pagina \(table.pages.first ?? 1)")) {
+                        Button("Review \(table.title) · PDF page \(table.pages.first ?? 1)") {
                             section = .tables; showPDFPage(table.pages.first ?? 1)
                         }.buttonStyle(FocusQuietActionStyle())
                     }
                 }
-                Text(UIStrings.text("Teksttabellen met herkenbare structuur: \(coverage.reliableTextTables) · onzekere structuur: \(coverage.uncertainTextTables). Dit is geen menselijke broncontrole."))
+                Text("Text tables with clear structure: \(coverage.reliableTextTables) · uncertain structure: \(coverage.uncertainTextTables). These counts do not mean a person checked the source.")
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(coverage.uncertainTableIDs, id: \.self) { id in
                     if let table = workspace.tables.first(where: { $0.id == id }) {
-                        Button(UIStrings.text("Bekijk onzekere tabel: \(table.title) · PDF-pagina \(table.pages.first ?? 1)")) {
+                        Button("Review uncertain table: \(table.title) · PDF page \(table.pages.first ?? 1)") {
                             section = .tables; showPDFPage(table.pages.first ?? 1)
                         }.buttonStyle(FocusQuietActionStyle())
                     }
                 }
             }.font(.callout).padding(.top, 10)
         } label: {
-            Label(UIStrings.text("Dekkingscontrole"), systemImage: "checklist")
+            Label(UIStrings.text("Coverage check"), systemImage: "checklist")
                 .font(.title3.weight(.semibold))
         }
         .disclosureGroupStyle(FullRowDisclosureGroupStyle())
@@ -1011,13 +1011,13 @@ struct SimpleView: View {
 
     @ViewBuilder private func pageLinks(_ pages: [Int], label: String) -> some View {
         HStack {
-            Text(UIStrings.text("\(label): \(pages.count) pagina’s (\(pages.first ?? 0)–\(pages.last ?? 0))"))
+            Text("\(label): \(pages.count) \(pages.count == 1 ? "page" : "pages") (\(pages.first ?? 0)–\(pages.last ?? 0))")
                 .font(.caption).foregroundStyle(.secondary)
             Menu {
                 ForEach(pages, id: \.self) { page in
-                    Button(UIStrings.text("PDF-pagina \(page)")) { showPDFPage(page) }
+                    Button("PDF page \(page)") { showPDFPage(page) }
                 }
-            } label: { Text(UIStrings.text("Bronpagina kiezen")).foregroundStyle(Color.primary) }
+            } label: { Text(UIStrings.text("Choose source page")).foregroundStyle(Color.primary) }
                 .disabled(pages.isEmpty).focusMenu()
         }
     }
@@ -1029,9 +1029,11 @@ struct SimpleView: View {
     /// Display wording may describe scope, while the stored WorkbenchSection stays stable for archives.
     private func workbenchSectionTitle(_ destination: WorkbenchSection) -> String {
         switch destination {
-        case .overview: "Documentoverzicht"
-        case .points: workspace.meetingPurpose == .raad ? "Documentpunten" : "Profielbevindingen"
-        default: destination.rawValue
+        case .overview: "Document overview"
+        case .points: workspace.meetingPurpose == .raad ? "Document findings" : "Profile findings"
+        case .tables: "Tables"
+        case .selection: "My selection"
+        case .search: "Search"
         }
     }
 
@@ -1253,21 +1255,21 @@ struct SimpleView: View {
     }
 
     @ViewBuilder private var pointFilters: some View {
-        Toggle(UIStrings.text("Compact lezen"), isOn: $compactReading).toggleStyle(.checkbox)
-        TextField(UIStrings.text("Filter pagina’s"), text: $pointPageFilter).textFieldStyle(FocusInputFieldStyle()).frame(maxWidth: 150)
-        let selectedReviewTitle = ["Alle", "Nog controleren", "Door mij gecontroleerd"][min(2, max(0, reviewFilter))]
-        FocusMenuPicker(UIStrings.text("Controle"), selection: $reviewFilter, selectedTitle: UIStrings.text(selectedReviewTitle)) {
-            Text(UIStrings.text("Alle")).tag(0)
-            Text(UIStrings.text("Nog controleren")).tag(1)
-            Text(UIStrings.text("Door mij gecontroleerd")).tag(2)
+        Toggle(UIStrings.text("Compact reading"), isOn: $compactReading).toggleStyle(.checkbox)
+        TextField(UIStrings.text("Filter pages"), text: $pointPageFilter).textFieldStyle(FocusInputFieldStyle()).frame(maxWidth: 150)
+        let selectedReviewTitle = ["All", "Needs review", "Checked by me"][min(2, max(0, reviewFilter))]
+        FocusMenuPicker(UIStrings.text("Review"), selection: $reviewFilter, selectedTitle: UIStrings.text(selectedReviewTitle)) {
+            Text(UIStrings.text("All")).tag(0)
+            Text(UIStrings.text("Needs review")).tag(1)
+            Text(UIStrings.text("Checked by me")).tag(2)
         }.frame(maxWidth: 240)
-        if !pointPageFilter.isEmpty || reviewFilter != 0 { Button(UIStrings.text("Wis filters")) { pointPageFilter = ""; reviewFilter = 0 } }
+        if !pointPageFilter.isEmpty || reviewFilter != 0 { Button(UIStrings.text("Clear filters")) { pointPageFilter = ""; reviewFilter = 0 } }
     }
 
     private func finishChartSelection(_ area: CGRect) {
         guard area.width >= 30, area.height >= 30,
               let view = pdfControls.view, let document = view.document else {
-            workspace.error = "Selecteer een groter gebied rondom het diagram."
+            workspace.error = "Select a larger area around the chart."
             return
         }
         func point(_ source: CGPoint) -> CGPoint {
@@ -1277,14 +1279,14 @@ struct SimpleView: View {
         let last = point(CGPoint(x: area.maxX, y: area.maxY))
         guard let page = view.page(for: first, nearest: false),
               let finalPage = view.page(for: last, nearest: false), page === finalPage else {
-            workspace.error = "Selecteer één diagram op één PDF-pagina."
+            workspace.error = "Select one chart on a single PDF page."
             return
         }
         let a = view.convert(first, to: page), b = view.convert(last, to: page)
         let region = CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
                             width: abs(a.x - b.x), height: abs(a.y - b.y))
         guard let image = ChartImageRenderer.render(page: page, region: region) else {
-            workspace.error = "Het geselecteerde diagram kon niet als afbeelding worden gelezen. Selecteer een iets kleiner gebied."
+            workspace.error = "The selected chart could not be read as an image. Select a smaller area."
             return
         }
         selectedChartExplanation = nil
@@ -1397,7 +1399,7 @@ struct SimpleView: View {
 
     @discardableResult private func importPDF(_ urls: [URL]) -> Bool {
         if compareProgram && workspace.programIdentity == "none" {
-            workspace.error = UIStrings.text("Voeg eerst een referentiedocument toe via Instellingen, of kies Documentsamenvatting.")
+            workspace.error = UIStrings.text("Add a reference document in Settings before comparing documents, or choose a document overview.")
             return false
         }
         return workspace.load(urls, themes: focus.themes, focus: focus.prompt,
@@ -1405,6 +1407,40 @@ struct SimpleView: View {
                               meetingPurpose: pendingImportPurpose) != nil
     }
 
+}
+
+private func meetingStatusLabel(_ status: SelectionMeetingStatus) -> String {
+    switch status {
+    case .discuss: "Discuss"
+    case .askQuestion: "Ask a question"
+    case .done: "Resolved"
+    }
+}
+
+private func readingAgendaCategoryTitle(_ category: ReadingAgendaCategory) -> String {
+    switch category {
+    case .decisions: "Decisions"
+    case .money: "Costs"
+    case .deadlines: "Deadlines"
+    case .actions: "Actions"
+    case .risks: "Risks"
+    case .openQuestions: "Open questions"
+    }
+}
+
+func analysisStateLabel(_ state: AnalysisState) -> String {
+    switch state {
+    case .notStarted: "Not analyzed yet."
+    case .running: "Analysis in progress…"
+    case .needsProgram: "Add a reference document in Settings to start this comparison."
+    case .noSummaryPoints: "No summary findings with confirmed source quotations were found."
+    case .noMatches: "Analysis complete: no supported connections were found."
+    case .unconfirmed: "Analysis complete: proposed connections could not be confirmed with source quotations."
+    case .complete: "Analysis complete."
+    case .incomplete: "Analysis partially complete. Retry the missing steps."
+    case .failed: "Analysis failed. Try again."
+    case .cancelled: "Analysis stopped. You can run it again."
+    }
 }
 
 private struct AnalysisCard: ViewModifier {

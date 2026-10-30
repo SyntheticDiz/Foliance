@@ -5,11 +5,11 @@ enum AppleFailure: Error, LocalizedError, Equatable {
     case context, refusal, temporary, unavailable, invalid, other(String)
     var errorDescription: String? {
         switch self {
-        case .context: return "Apple Intelligence: onvoldoende ruimte voor bron en antwoord."
-        case .refusal: return "Apple Intelligence heeft deze inhoud geweigerd. Dit deel is niet verwerkt."
-        case .temporary: return "Apple Intelligence is tijdelijk bezet of reageert niet op tijd."
-        case .unavailable: return "Apple Intelligence of de benodigde taal/modelbestanden zijn niet beschikbaar."
-        case .invalid: return "AI gaf ongeldige uitvoer of onbekende bronverwijzingen."
+        case .context: return "Apple Intelligence ran out of room for the source and response."
+        case .refusal: return "Apple Intelligence declined this content. This part was not processed."
+        case .temporary: return "Apple Intelligence is temporarily busy or did not respond in time."
+        case .unavailable: return "Apple Intelligence or the required language or model files are unavailable."
+        case .invalid: return "AI returned invalid output or unknown source references."
         case .other(let detail): return detail
         }
     }
@@ -66,6 +66,6 @@ struct AppleAnalysisIncomplete: LocalizedError {
     let total: Int
     let issues: [String]
     var errorDescription: String? {
-        "Analyse onvolledig: \(completed) van \(total) stappen verwerkt.\n" + issues.joined(separator: "\n")
+        "Analysis incomplete: processed \(completed) of \(total) steps.\n" + issues.joined(separator: "\n")
     }
 }

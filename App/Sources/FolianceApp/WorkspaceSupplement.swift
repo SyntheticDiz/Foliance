@@ -83,7 +83,7 @@ struct SavedChartAnalysis: Codable, Sendable, Identifiable {
     static func make(selected: SelectedChart, explanation: ChartExplanation) throws -> SavedChartAnalysis {
         let representation = NSBitmapImageRep(cgImage: selected.image)
         guard let png = representation.representation(using: .png, properties: [:]) else {
-            throw AppError(message: "De geselecteerde diagramafbeelding kon niet als PNG worden bewaard.")
+            throw AppError(message: "The selected chart image could not be saved as a PNG.")
         }
         return SavedChartAnalysis(id: UUID(), page: selected.page, imagePNG: png, explanation: explanation)
     }

@@ -8,11 +8,33 @@ if [[ "$MODE" != preview && "$MODE" != store ]]; then
     exit 2
 fi
 if [[ "$MODE" == store ]]; then
-    if [[ -z "${FOLIANCE_TEAM_ID:-}" ]]; then
-        FOLIANCE_TEAM_ID="$(python3 -c 'import json; from pathlib import Path; p=Path("AppStore/Submission.local.json"); print(json.loads(p.read_text()).get("teamID", "") if p.exists() else "")')"
-        export FOLIANCE_TEAM_ID
-    fi
-    python3 scripts/preflight-store.py
+    load_submission_setting() {
+        python3 - "$1" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+try:
+    config = json.loads(Path("AppStore/Submission.local.json").read_text())
+    value = config.get(sys.argv[1], "")
+except FileNotFoundError:
+    value = ""
+except (OSError, json.JSONDecodeError):
+    print("Could not read local App Store submission settings.", file=sys.stderr)
+    raise SystemExit(1)
+
+if isinstance(value, str):
+    print(value, end="")
+PY
+    }
+    FOLIANCE_APP_SIGN_IDENTITY="${FOLIANCE_APP_SIGN_IDENTITY:-$(load_submission_setting appSigningIdentity)}"
+    FOLIANCE_INSTALLER_SIGN_IDENTITY="${FOLIANCE_INSTALLER_SIGN_IDENTITY:-$(load_submission_setting installerSigningIdentity)}"
+    FOLIANCE_PROVISION_PROFILE="${FOLIANCE_PROVISION_PROFILE:-$(load_submission_setting provisionProfile)}"
+    FOLIANCE_TEAM_ID="${FOLIANCE_TEAM_ID:-$(load_submission_setting teamID)}"
+    export FOLIANCE_APP_SIGN_IDENTITY FOLIANCE_INSTALLER_SIGN_IDENTITY FOLIANCE_PROVISION_PROFILE FOLIANCE_TEAM_ID
+    # A signed package can be prepared before final listing screenshots exist.
+    # The preflight still reports that they are required before submission.
+    python3 scripts/preflight-store.py --allow-missing-screenshots
 fi
 ARCH_ARGS=(--arch arm64)
 if [[ "$MODE" == store || "${FOLIANCE_UNIVERSAL:-0}" == 1 ]]; then
@@ -56,6 +78,10 @@ python3 - "$APP_DIR/Contents/Info.plist" "$PROJECT_DIR/.build/icon-info.plist" <
 import sys,plistlib
 with open(sys.argv[1],'rb') as f: main=plistlib.load(f)
 with open(sys.argv[2],'rb') as f: main.update(plistlib.load(f))
+# Use the same canonical icon resource in the bundle and at runtime. Keep the
+# compiled AppIcon catalog alongside it for the 1024-pixel store artwork.
+main['CFBundleIconFile']='Foliance'
+main.pop('CFBundleIconName',None)
 with open(sys.argv[1],'wb') as f: plistlib.dump(main,f)
 PY
 plutil -lint "$APP_DIR/Contents/Info.plist" "$APP_DIR/Contents/Resources/PrivacyInfo.xcprivacy"
@@ -77,5 +103,6 @@ if [[ "$MODE" == store ]]; then
     productbuild --component "$APP_DIR" /Applications \
         --sign "$FOLIANCE_INSTALLER_SIGN_IDENTITY" "$PROJECT_DIR/dist/Foliance-1.0.0.pkg"
     pkgutil --check-signature "$PROJECT_DIR/dist/Foliance-1.0.0.pkg"
+    printf 'Store package built; this does not indicate App Store submission readiness.\n'
 fi
 printf '\nBuilt %s: %s\n' "$MODE" "$APP_DIR"
