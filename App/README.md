@@ -1,6 +1,6 @@
 # Foliance
 
-Foliance is a native macOS PDF reader for understanding reports, project plans and meeting papers while keeping original source passages in view. Version **1.0.0**, build **3**.
+Foliance is a native macOS PDF reader for understanding reports, project plans and meeting papers while keeping original source passages in view. Version **1.0.0**, build **4**.
 
 ## Use
 
@@ -17,6 +17,7 @@ AI interpretations can omit or misread information. A matched quotation confirms
 - macOS 26 or later. Apple Intelligence requires compatible Apple silicon, enabled Apple Intelligence and its downloaded model.
 - Reading, local search and saved results remain available when AI is unavailable.
 - Apple Intelligence is the default. Optional OpenAI API analysis requires each user’s own API key, compatible model access, separate API billing and explicit document-sharing consent. **Continue with ChatGPT** also supports eligible ChatGPT plans through OpenAI’s official open-source OAuth flow, with account-specific models and plan/credit usage limits. There is no automatic cloud fallback.
+- ChatGPT sign-in is restored from Foliance’s non-synchronizing Keychain on relaunch. Renewable sessions refresh automatically; OpenAI can require sign-in again after expiry or revocation.
 - OpenAI keys are stored only in Foliance’s non-synchronizing Keychain entry. They are excluded from work files, exports and preferences. No credentials are imported from another app.
 - OpenAI requests send task content directly to OpenAI over HTTPS. Responses storage is disabled; this does not disable OpenAI abuse-monitoring retention. See the bundled and public privacy policy.
 - The independent `app.foliance.mac` identity has its own preferences and sandbox container. File access is limited to user-selected files and security-scoped bookmarks; networking is outbound except for the temporary OAuth callback bound to 127.0.0.1.

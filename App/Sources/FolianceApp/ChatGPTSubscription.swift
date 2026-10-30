@@ -57,7 +57,7 @@ protocol ChatGPTSubscriptionCredentialStore: Sendable {
     func setActiveClientID(_ clientID: String?)
 }
 
-enum ChatGPTSubscriptionError: LocalizedError, Sendable {
+enum ChatGPTSubscriptionError: LocalizedError, Sendable, Equatable {
     case invalidRequest, randomnessUnavailable, invalidCallback, callbackTimedOut, listenerUnavailable
     case browserUnavailable, accessDenied, planScopeMissing, invalidIdentityToken, invalidDiscovery
     case codeExchangeFailed, invalidResponse, networkRequestFailed, modelsUnavailable, notConnected
@@ -81,7 +81,7 @@ enum ChatGPTSubscriptionError: LocalizedError, Sendable {
         case .modelsUnavailable: "Foliance could not load models for this ChatGPT account."
         case .notConnected: "Connect a ChatGPT account that has granted plan usage to Foliance."
         case .refreshFailed: "The ChatGPT session could not be renewed. Sign in again."
-        case .keychainFailure: "Foliance could not securely save the ChatGPT session in this Mac’s Keychain."
+        case .keychainFailure: "Foliance could not access or update the ChatGPT session in this Mac’s Keychain. Unlock Keychain and retry."
         }
     }
 }
@@ -323,9 +323,22 @@ final class ChatGPTSubscriptionAccount: ObservableObject {
     @Published private(set) var models: [ChatGPTSubscriptionModel] = []
     @Published private(set) var savedAccounts: [ChatGPTSubscriptionSavedAccount] = []
     @Published private(set) var selectedAccountID: String?
+    @Published private(set) var didRestoreSession = false
 
     private var signInTask: Task<ChatGPTSubscriptionProfile, Error>?
-    private init() { Task { await loadSavedAccount() } }
+    private let connection: ChatGPTSubscriptionConnection
+    private let shouldLoadCatalogAutomatically: () -> Bool
+    private var restoreTask: Task<Void, Never>?
+    private var isRefreshingModels = false
+
+    init(connection: ChatGPTSubscriptionConnection = .shared,
+         shouldLoadCatalogAutomatically: @escaping () -> Bool = {
+             AIConfiguration.usesChatGPTPlan(AIConfiguration.selectedModel)
+         }, automaticallyRestore: Bool = true) {
+        self.connection = connection
+        self.shouldLoadCatalogAutomatically = shouldLoadCatalogAutomatically
+        if automaticallyRestore { Task { await restoreSessionIfNeeded() } }
+    }
 
     func signIn() async { await performSignIn(forcePlanConsent: false, addAccount: false) }
 
@@ -334,18 +347,24 @@ final class ChatGPTSubscriptionAccount: ObservableObject {
     func selectAccount(id: String) async {
         guard !busy, id != selectedAccountID else { return }
         busy = true; error = nil
-        let profile = await ChatGPTSubscriptionConnection.shared.selectAccount(id: id)
-        selectedAccountID = id
-        if let profile {
-            isConnected = true; email = profile.email; canUsePlan = profile.canUsePlan
-            needsPlanConsent = !profile.canUsePlan
-            status = profile.canUsePlan ? "Connected to ChatGPT plan usage." : "Connected. ChatGPT plan usage permission was not granted."
-            if profile.canUsePlan { await refreshModels() } else { models = [] }
-        } else {
-            isConnected = false; canUsePlan = false; needsPlanConsent = false; email = ""; models = []
-            status = "Selected account. Sign in to reconnect."
+        do {
+            let profile = try await connection.selectAccount(id: id)
+            selectedAccountID = id
+            if let profile {
+                isConnected = true; email = profile.email; canUsePlan = profile.canUsePlan
+                needsPlanConsent = !profile.canUsePlan
+                status = profile.canUsePlan ? "Connected to ChatGPT plan usage." : "Connected. ChatGPT plan usage permission was not granted."
+                models = []
+                if profile.canUsePlan { await refreshModels() }
+            } else {
+                isConnected = false; canUsePlan = false; needsPlanConsent = false; email = ""; models = []
+                status = "Selected account. Sign in to reconnect."
+            }
+            try await refreshSavedAccounts()
+        } catch {
+            self.error = error.localizedDescription
+            status = "The saved ChatGPT account could not be loaded. Try again."
         }
-        await refreshSavedAccounts()
         busy = false
     }
 
@@ -358,14 +377,16 @@ final class ChatGPTSubscriptionAccount: ObservableObject {
     private func performSignIn(forcePlanConsent: Bool, addAccount: Bool) async {
         guard !busy else { return }
         busy = true; error = nil; status = "Connecting to ChatGPT…"
-        let task = Task { try await ChatGPTSubscriptionConnection.shared.signIn(forcePlanConsent: forcePlanConsent, addAccount: addAccount) }
+        let task = Task { try await connection.signIn(forcePlanConsent: forcePlanConsent, addAccount: addAccount) }
         signInTask = task
         do {
             let profile = try await task.value
-            selectedAccountID = await ChatGPTSubscriptionConnection.shared.accountSnapshot().selectedID
+            let snapshot = try await connection.accountSnapshot()
+            selectedAccountID = snapshot.selectedID
             isConnected = true; email = profile.email; canUsePlan = profile.canUsePlan
             needsPlanConsent = !profile.canUsePlan
             status = profile.canUsePlan ? "Connected to ChatGPT plan usage." : "Connected. ChatGPT plan usage permission was not granted."
+            models = []
             if profile.canUsePlan { await refreshModels() } else { models = [] }
         } catch is CancellationError {
             status = "ChatGPT sign-in cancelled."
@@ -373,66 +394,122 @@ final class ChatGPTSubscriptionAccount: ObservableObject {
             self.error = error.localizedDescription; status = "ChatGPT sign-in failed."
         }
         signInTask = nil; busy = false
-        await refreshSavedAccounts()
+        do { try await refreshSavedAccounts() }
+        catch { self.error = error.localizedDescription }
     }
 
     func cancelSignIn() {
         signInTask?.cancel()
-        Task { await ChatGPTSubscriptionConnection.shared.cancelSignIn() }
+        Task { await connection.cancelSignIn() }
     }
 
     func signOut() async {
         busy = true; error = nil
-        let revoked = await ChatGPTSubscriptionConnection.shared.signOut()
-        isConnected = false; canUsePlan = false; email = ""; models = []; busy = false
-        needsPlanConsent = false
-        status = revoked ? "Disconnected from ChatGPT." : "Disconnected locally; OpenAI did not confirm remote revocation."
-        await refreshSavedAccounts()
+        do {
+            let revoked = try await connection.signOut()
+            isConnected = false; canUsePlan = false; email = ""; models = []; busy = false
+            needsPlanConsent = false
+            status = revoked ? "Disconnected from ChatGPT." : "Disconnected locally; OpenAI did not confirm remote revocation."
+            try await refreshSavedAccounts()
+        } catch {
+            self.error = error.localizedDescription
+            status = "The ChatGPT session could not be disconnected from this Mac."
+            busy = false
+        }
     }
 
     func refreshModels() async {
         guard isConnected, canUsePlan else { models = []; return }
+        guard !isRefreshingModels else { return }
+        isRefreshingModels = true
+        defer { isRefreshingModels = false }
         do {
-            models = try await ChatGPTSubscriptionConnection.shared.refreshModels()
+            models = try await connection.refreshModels()
             status = "ChatGPT models updated."
             error = nil
         } catch {
             self.error = error.localizedDescription; status = "ChatGPT models could not be loaded."
-            if await ChatGPTSubscriptionConnection.shared.savedProfile() == nil {
-                isConnected = false; canUsePlan = false; needsPlanConsent = false; models = []
-            }
+            do {
+                let profile = try await connection.savedProfile()
+                if profile == nil {
+                    isConnected = false; canUsePlan = false; needsPlanConsent = false; models = []
+                }
+            } catch { /* A locked Keychain must not be presented as a disconnected account. */ }
         }
     }
 
     func accessToken() async throws -> String {
-        do { return try await ChatGPTSubscriptionConnection.shared.accessToken() }
+        do { return try await connection.accessToken() }
         catch {
-            if await ChatGPTSubscriptionConnection.shared.savedProfile() == nil {
-                isConnected = false; canUsePlan = false; needsPlanConsent = false; models = []
-                status = "ChatGPT session expired. Sign in again."
-            }
+            do {
+                let profile = try await connection.savedProfile()
+                if profile == nil {
+                    isConnected = false; canUsePlan = false; needsPlanConsent = false; models = []
+                    status = "ChatGPT session expired. Sign in again."
+                }
+            } catch { /* Preserve the current account state while Keychain access is unavailable. */ }
             throw error
         }
     }
 
     /// Call when the Responses transport receives a confirmed 401 for this account.
     func invalidateAfterUnauthorizedResponse() async {
-        await ChatGPTSubscriptionConnection.shared.invalidateSession()
-        isConnected = false; canUsePlan = false; needsPlanConsent = false; models = []
-        status = "ChatGPT session was rejected. Sign in again."
+        do {
+            try await connection.invalidateSession()
+            isConnected = false; canUsePlan = false; needsPlanConsent = false; models = []
+            status = "ChatGPT session was rejected. Sign in again."
+        } catch {
+            self.error = error.localizedDescription
+            status = "The rejected ChatGPT session could not be cleared from this Mac."
+        }
+    }
+
+    func restoreSessionIfNeeded(loadCatalog: Bool = false) async {
+        var startedRestore = false
+        if let restoreTask {
+            await restoreTask.value
+        } else if !didRestoreSession {
+            guard !busy else { return }
+            busy = true
+            startedRestore = true
+            let task = Task { await self.loadSavedAccount() }
+            restoreTask = task
+            await task.value
+            restoreTask = nil
+        }
+        if loadCatalog || shouldLoadCatalogAutomatically() { await loadCatalogIfNeeded() }
+        if startedRestore { busy = false }
+    }
+
+    private func loadCatalogIfNeeded() async {
+        guard isConnected, canUsePlan, models.isEmpty else { return }
+        await refreshModels()
     }
 
     private func loadSavedAccount() async {
-        await refreshSavedAccounts()
-        selectedAccountID = await ChatGPTSubscriptionConnection.shared.accountSnapshot().selectedID
-        guard let profile = await ChatGPTSubscriptionConnection.shared.savedProfile() else { return }
-        isConnected = true; canUsePlan = profile.canUsePlan; email = profile.email
-        needsPlanConsent = !profile.canUsePlan
-        status = profile.canUsePlan ? "Connected to ChatGPT plan usage." : "Connected. ChatGPT plan usage permission was not granted."
+        do {
+            let snapshot = try await connection.accountSnapshot()
+            savedAccounts = snapshot.accounts
+            selectedAccountID = snapshot.selectedID
+            guard let profile = try await connection.savedProfile() else {
+                isConnected = false; canUsePlan = false; needsPlanConsent = false; email = ""; models = []
+                status = snapshot.selectedID == nil ? "Not connected to ChatGPT." : "Saved account. Sign in to reconnect."
+                didRestoreSession = true
+                return
+            }
+            isConnected = true; canUsePlan = profile.canUsePlan; email = profile.email
+            needsPlanConsent = !profile.canUsePlan
+            status = profile.canUsePlan ? "Connected to ChatGPT plan usage." : "Connected. ChatGPT plan usage permission was not granted."
+            didRestoreSession = true
+        } catch {
+            self.error = error.localizedDescription
+            status = "The saved ChatGPT session could not be restored. Try again."
+            didRestoreSession = false
+        }
     }
 
-    private func refreshSavedAccounts() async {
-        let snapshot = await ChatGPTSubscriptionConnection.shared.accountSnapshot()
+    private func refreshSavedAccounts() async throws {
+        let snapshot = try await connection.accountSnapshot()
         savedAccounts = snapshot.accounts
         selectedAccountID = snapshot.selectedID
     }
@@ -467,32 +544,37 @@ actor ChatGPTSubscriptionConnection {
     private let session: URLSession
     private let store: any ChatGPTSubscriptionCredentialStore
     private var credentials: [String: ChatGPTSubscriptionCredential] = [:]
+    private var pendingCredentialWrites: [String: ChatGPTSubscriptionCredential] = [:]
     private var activeClientID: String?
     private var loaded = false
     private var callbackServer: ChatGPTSubscriptionLoopbackServer?
-    private var refreshTask: Task<String, Error>?
+    private var refreshTasks: [String: Task<String, Error>] = [:]
     private var loggingOut = false
     private var generation: UInt64 = 0
 
-    init(store: any ChatGPTSubscriptionCredentialStore = ChatGPTSubscriptionKeychain()) {
+    init(store: any ChatGPTSubscriptionCredentialStore = ChatGPTSubscriptionKeychain(), session: URLSession? = nil) {
         self.store = store
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 25
-        configuration.timeoutIntervalForResource = 45
-        configuration.httpCookieStorage = nil
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        session = URLSession(configuration: configuration, delegate: ChatGPTSubscriptionRedirectRefuser(), delegateQueue: nil)
+        if let session {
+            self.session = session
+        } else {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 25
+            configuration.timeoutIntervalForResource = 45
+            configuration.httpCookieStorage = nil
+            configuration.urlCache = nil
+            configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+            self.session = URLSession(configuration: configuration, delegate: ChatGPTSubscriptionRedirectRefuser(), delegateQueue: nil)
+        }
     }
 
-    func savedProfile() -> ChatGPTSubscriptionProfile? {
-        guard let record = loadCredential(), ChatGPTSubscriptionOAuth.hasSavedSession(
+    func savedProfile() throws -> ChatGPTSubscriptionProfile? {
+        guard let record = try loadCredential(), ChatGPTSubscriptionOAuth.hasSavedSession(
             subject: record.subject, accessToken: record.accessToken, refreshToken: record.refreshToken) else { return nil }
         return profile(record)
     }
 
-    func accountSnapshot() -> ChatGPTSubscriptionAccountSnapshot {
-        loadCredentials()
+    func accountSnapshot() throws -> ChatGPTSubscriptionAccountSnapshot {
+        try loadCredentials()
         let accounts = credentials.values.sorted { $0.clientID < $1.clientID }.map { record in
             ChatGPTSubscriptionSavedAccount(id: record.clientID, email: record.email,
                 isConnected: ChatGPTSubscriptionOAuth.hasSavedSession(subject: record.subject,
@@ -501,18 +583,22 @@ actor ChatGPTSubscriptionConnection {
         return ChatGPTSubscriptionAccountSnapshot(accounts: accounts, selectedID: activeClientID)
     }
 
-    func selectAccount(id: String) -> ChatGPTSubscriptionProfile? {
-        loadCredentials()
+    func selectAccount(id: String) throws -> ChatGPTSubscriptionProfile? {
+        try loadCredentials()
         guard credentials[id] != nil else { return nil }
+        try flushPendingCredential(clientID: id)
         activeClientID = id
         store.setActiveClientID(id)
-        return savedProfile()
+        return try savedProfile()
     }
 
     func signIn(forcePlanConsent: Bool = false, addAccount: Bool = false) async throws -> ChatGPTSubscriptionProfile {
         try Task.checkCancellation()
         guard !loggingOut else { throw ChatGPTSubscriptionError.notConnected }
-        let previous = addAccount ? nil : loadCredential()
+        try loadCredentials()
+        let previousClientID = addAccount ? nil : activeClientID
+        if let previousClientID { try flushPendingCredential(clientID: previousClientID) }
+        let previous = previousClientID.flatMap { credentials[$0] }
         let isNew = previous == nil || previous?.clientID.isEmpty == true
         let opGeneration = generation
         let hostID = previous.flatMap { $0.hostID.isEmpty ? nil : $0.hostID } ?? stableHostID()
@@ -575,12 +661,13 @@ actor ChatGPTSubscriptionConnection {
 
     func cancelSignIn() { callbackServer?.cancel() }
 
-    func signOut() async -> Bool {
+    func signOut() async throws -> Bool {
         loggingOut = true; generation &+= 1
         callbackServer?.cancel(); callbackServer = nil
-        refreshTask?.cancel(); refreshTask = nil
+        refreshTasks.values.forEach { $0.cancel() }
+        refreshTasks.removeAll()
         defer { loggingOut = false }
-        guard var record = loadCredential() else { return true }
+        guard var record = try loadCredential() else { return true }
         var revoked = record.refreshToken == nil && record.accessToken == nil
         if let refreshToken = record.refreshToken, !record.clientID.isEmpty {
             for attempt in 0..<3 {
@@ -605,20 +692,24 @@ actor ChatGPTSubscriptionConnection {
             }
         }
         record.idToken = nil; record.accessToken = nil; record.refreshToken = nil; record.expiresAt = nil; record.scopes = []
-        do { try saveCredential(record, activate: false) } catch { }
+        try saveCredential(record, activate: false)
         return revoked
     }
 
     func accessToken() async throws -> String {
-        guard !loggingOut, let record = loadCredential(),
-              ChatGPTSubscriptionOAuth.hasPlanScope(record.scopes),
-              let token = record.accessToken, let expiry = record.expiresAt,
-              record.refreshToken != nil else { throw ChatGPTSubscriptionError.notConnected }
+        guard !loggingOut else { throw ChatGPTSubscriptionError.notConnected }
+        try loadCredentials()
+        guard let clientID = activeClientID else { throw ChatGPTSubscriptionError.notConnected }
+        try flushPendingCredential(clientID: clientID)
+        guard let record = credentials[clientID], ChatGPTSubscriptionOAuth.hasPlanScope(record.scopes),
+              let token = record.accessToken, let expiry = record.expiresAt, record.refreshToken != nil else {
+            throw ChatGPTSubscriptionError.notConnected
+        }
         if expiry.timeIntervalSinceNow > 90 { return token }
-        if let refreshTask { return try await refreshTask.value }
-        let task = Task { try await self.refreshAccessToken() }
-        refreshTask = task
-        defer { refreshTask = nil }
+        if let refreshTask = refreshTasks[record.clientID] { return try await refreshTask.value }
+        let task = Task { try await self.refreshAccessToken(clientID: clientID) }
+        refreshTasks[clientID] = task
+        defer { refreshTasks[clientID] = nil }
         return try await task.value
     }
 
@@ -630,18 +721,20 @@ actor ChatGPTSubscriptionConnection {
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ChatGPTSubscriptionError.networkRequestFailed }
         if http.statusCode == 401 {
-            clearSessionTokens()
+            try clearSessionTokens()
             throw ChatGPTSubscriptionError.notConnected
         }
         guard http.statusCode == 200 else { throw ChatGPTSubscriptionError.modelsUnavailable }
         return try ChatGPTSubscriptionOAuth.parseModels(data)
     }
 
-    func invalidateSession() { clearSessionTokens() }
+    func invalidateSession() throws { try clearSessionTokens() }
 
-    private func refreshAccessToken() async throws -> String {
+    private func refreshAccessToken(clientID: String) async throws -> String {
         let opGeneration = generation
-        guard var record = loadCredential(), let refreshToken = record.refreshToken, !record.clientID.isEmpty else {
+        try loadCredentials()
+        try flushPendingCredential(clientID: clientID)
+        guard var record = credentials[clientID], let refreshToken = record.refreshToken, !clientID.isEmpty else {
             throw ChatGPTSubscriptionError.notConnected
         }
         let discovery = try await fetchDiscovery()
@@ -657,7 +750,7 @@ actor ChatGPTSubscriptionConnection {
         guard http.statusCode == 200 else {
             if isTerminalRefreshError(data) {
                 record.idToken = nil; record.accessToken = nil; record.refreshToken = nil; record.expiresAt = nil; record.scopes = []
-                try? saveCredential(record)
+                try saveCredential(record, activate: activeClientID == clientID)
             }
             throw ChatGPTSubscriptionError.refreshFailed
         }
@@ -676,7 +769,7 @@ actor ChatGPTSubscriptionConnection {
         record.accessToken = tokens.access_token; record.refreshToken = nextRefresh
         record.expiresAt = Date().addingTimeInterval(tokens.expires_in); record.scopes = scopes
         try ensureCurrent(opGeneration)
-        try saveCredential(record)
+        try saveCredential(record, activate: activeClientID == clientID)
         return tokens.access_token
     }
 
@@ -719,10 +812,9 @@ actor ChatGPTSubscriptionConnection {
                                    canUsePlan: ChatGPTSubscriptionOAuth.hasPlanScope(record.scopes) && record.accessToken != nil)
     }
 
-    private func loadCredentials() {
+    private func loadCredentials() throws {
         guard !loaded else { return }
-        loaded = true
-        let stored = (try? store.loadAll()) ?? []
+        let stored = try store.loadAll()
         credentials = Dictionary(stored.map { ($0.clientID, $0) }, uniquingKeysWith: { _, latest in latest })
         let requestedID = store.activeClientID()
         activeClientID = requestedID.flatMap { credentials[$0] == nil ? nil : $0 }
@@ -730,17 +822,27 @@ actor ChatGPTSubscriptionConnection {
             activeClientID = first
             store.setActiveClientID(first)
         }
+        loaded = true
     }
 
-    private func loadCredential() -> ChatGPTSubscriptionCredential? {
-        loadCredentials()
+    private func loadCredential() throws -> ChatGPTSubscriptionCredential? {
+        try loadCredentials()
         guard let activeClientID else { return nil }
         return credentials[activeClientID]
     }
 
     private func saveCredential(_ record: ChatGPTSubscriptionCredential, activate: Bool = true) throws {
-        try store.save(record)
+        do { try store.save(record) }
+        catch {
+            // Retain a validated rotated record in process memory until Keychain
+            // can atomically store it. Callers must flush this before using tokens.
+            credentials[record.clientID] = record
+            pendingCredentialWrites[record.clientID] = record
+            loaded = true
+            throw error
+        }
         credentials[record.clientID] = record
+        pendingCredentialWrites.removeValue(forKey: record.clientID)
         loaded = true
         if activate {
             activeClientID = record.clientID
@@ -748,10 +850,18 @@ actor ChatGPTSubscriptionConnection {
         }
     }
 
-    private func clearSessionTokens() {
-        guard var record = loadCredential() else { return }
+    private func flushPendingCredential(clientID: String) throws {
+        guard let pending = pendingCredentialWrites[clientID] else { return }
+        try store.save(pending)
+        credentials[clientID] = pending
+        pendingCredentialWrites.removeValue(forKey: clientID)
+        loaded = true
+    }
+
+    private func clearSessionTokens() throws {
+        guard var record = try loadCredential() else { return }
         record.idToken = nil; record.accessToken = nil; record.refreshToken = nil; record.expiresAt = nil; record.scopes = []
-        try? saveCredential(record, activate: false)
+        try saveCredential(record, activate: false)
     }
 
     private func stableHostID() -> String {
@@ -793,14 +903,19 @@ final class ChatGPTSubscriptionKeychain: ChatGPTSubscriptionCredentialStore, @un
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return [] }
         guard status == errSecSuccess, let rows = result as? [[String: Any]] else { throw ChatGPTSubscriptionError.keychainFailure }
-        return rows.compactMap { row in
+        var credentials: [ChatGPTSubscriptionCredential] = []
+        credentials.reserveCapacity(rows.count)
+        for row in rows {
             guard let account = row[kSecAttrAccount as String] as? String,
                   let data = row[kSecValueData as String] as? Data,
                   let credential = try? JSONDecoder().decode(ChatGPTSubscriptionCredential.self, from: data),
                   credential.clientID == account,
-                  account.range(of: #"^[A-Za-z0-9._-]+$"#, options: .regularExpression) != nil else { return nil }
-            return credential
+                  account.range(of: #"^[A-Za-z0-9._-]+$"#, options: .regularExpression) != nil else {
+                throw ChatGPTSubscriptionError.keychainFailure
+            }
+            credentials.append(credential)
         }
+        return credentials
     }
 
     func save(_ credential: ChatGPTSubscriptionCredential) throws {

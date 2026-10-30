@@ -1,43 +1,44 @@
-# Foliance App Store listing draft
+# App Store listing and release status
 
-Name: Foliance: PDF Insights
-Subtitle: Understand PDFs, check sources
-Category: Productivity
-Languages: English
-Minimum macOS: 26.0
+## Saved App Store Connect metadata
 
-## Description
+- **App:** Foliance · macOS · app ID `6828975143`
+- **Version:** 1.0.0
+- **Name:** Foliance (reserved)
+- **Subtitle:** Read and review PDF reports
+- **Primary category:** Productivity
+- **Price:** $0.00 in all 175 countries/regions
+- **Discoverability:** Public (default)
+- **Availability:** 175 countries/regions, available on app release
+- **Release:** Manual release selected
+- **Third-party content rights:** Yes, explicitly authorized and saved
+- **EU trader status:** Non-trader, explicitly confirmed; Done, compliance Active
+- **App Privacy:** Published with four categories—email, user ID, device ID and other user content. Each is linked to App Functionality and marked not used for tracking.
+- **Age rating:** Existing 4+ rating and 172 country/region exceptions verified. No age-rating questionnaire answers were entered or re-audited as part of this status update.
+- **Support URL:** https://syntheticdiz.github.io/Foliance/support.html
+- **Marketing URL:** https://syntheticdiz.github.io/Foliance/
+- **Privacy policy URL:** https://syntheticdiz.github.io/Foliance/privacy.html
+- **App Review contacts:** Saved privately in App Store Connect
+- **Screenshots:** Three 2560 × 1600 PNGs uploaded and confirmed (3 of 10 slots)
 
-Turn long PDFs into a clear reading brief, while keeping the original pages in view.
+The saved English metadata is in [`Metadata.en-US.json`](Metadata.en-US.json). Promotional text, description and keywords should remain consistent with that file.
 
-Foliance helps you review reports, project plans and meeting papers. Start with an overview, choose a reading profile or add your own reading goal. Inspect summaries, findings, questions, tables and source passages side by side with the PDF. Keep notes and selected passages, then export a brief or save your work to continue later.
+## App privacy summary
 
-- Summaries and findings linked to their source pages.
-- Reading profiles for reports, project plans and meeting notes.
-- An optional reference document for source-backed comparison.
-- Local document search, notes and selected passages.
-- PDF export and portable Foliance work documents.
-- On-device Apple Intelligence, optional OpenAI API using your own key, or eligible ChatGPT-plan usage.
-- An English interface and English explanations, preserving original source quotations.
+Foliance has no developer account, backend, advertising, analytics or tracking. PDFs, notes, summaries and work files are stored locally unless a user chooses an online OpenAI provider. After separate document-sharing consent, the selected task can send document text, relevant reference text and criteria, reading goals, and questions directly to OpenAI. Continue with ChatGPT also uses the user's OpenAI account for sign-in and model availability; Foliance stores account tokens in its own non-synchronizing Keychain entry. API-key use and ChatGPT-plan use have separate billing paths. Foliance asks OpenAI not to store Responses for later retrieval, but OpenAI abuse-monitoring retention may still apply.
 
-On-device AI requires Apple silicon, macOS 26 or later, enabled Apple Intelligence and a compatible downloaded model. Optional OpenAI analysis requires your own API key, a compatible API model, internet access, separate OpenAI API billing and explicit consent to share task content. ChatGPT-plan sign-in is a separate option using eligible plan usage or available credits; account eligibility, model access and limits apply. API-key billing remains separate. PDF reading, local search and saved results remain available when AI is unavailable. Scans without readable text require OCR before import. AI can omit or misinterpret information; check important conclusions, amounts and conditions in the original document. Source matching confirms a quotation's location, not the correctness of every interpretation.
+The App Privacy answers have been published after the required Apple legal certification was explicitly approved. The four configured data categories and their App Functionality purpose are listed above; no tracking is declared. The public policy explains the relevant account and cloud-processing details.
 
-## App privacy answers for this implementation
+## Remaining release work
 
-Data collection: Other User Content, optional, linked to the user’s chosen OpenAI API or ChatGPT account, used for App Functionality. This includes document text, reference text/criteria, reading goals and questions sent when the user explicitly chooses OpenAI.
-Tracking: No.
-Third-party analytics/advertising: None.
-Accounts: No Foliance account. An OpenAI API account/key is required for optional API-key billing; optional ChatGPT-plan access uses the user’s existing eligible ChatGPT account.
-Cloud AI: Optional OpenAI API-key or ChatGPT-plan connection; direct HTTPS requests with Responses storage disabled. OpenAI abuse-monitoring retention still applies.
-Confirm these draft answers against the final implementation and current App Store Connect questionnaire before submission.
+- Validate the completed build 4 distribution-signed package with Transporter, upload it and associate it with version 1.0.0.
+- Optionally perform a live ChatGPT sign-in and model-catalog check with a user-owned account; this has not been done.
+- Submit the app for Apple review. Manual release is selected; the app has not been submitted or approved.
 
-## Publisher inputs still required
+Foliance is free and MIT-licensed, with no paywall, in-app purchases or subscription sales. Optional OpenAI usage is billed or limited according to the user's chosen account and plan; this listing makes no unlimited-usage claim.
 
-- App Store Connect app record. The explicit bundle identifier app.foliance.mac is registered.
-- Signing setup is complete locally: valid application/installer distribution certificates and a matching App Store provisioning profile. Keep this material outside public source.
-- Public support: https://syntheticdiz.github.io/Foliance/support.html (live).
-- Public privacy policy: https://syntheticdiz.github.io/Foliance/privacy.html (live).
-- Rights ownership, seller/copyright details, availability, price and age-rating answers.
-- App Store screenshots captured from the final signed candidate.
+## Apple field references
 
-Pricing: Free. Foliance is open source under MIT and has no paywall, purchases or subscription sales. External OpenAI plan or API usage remains governed by the user’s account.
+- [App information reference](https://developer.apple.com/help/app-store-connect/reference/app-information/app-information)
+- [Platform version information reference](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information)
+- [Add a new app](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/)

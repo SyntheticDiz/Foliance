@@ -163,10 +163,15 @@ struct ExportGlossaryItem: Sendable {
         let terms = Set(personal.general.keys).union(personal.documents[key]?.keys.map { $0 } ?? [])
         return Glossary.extract(pages: document.pages, personalTerms: terms).map { entry in
             let own = personal.meaning(entry.abbreviation, document: key)
-            if own == nil, entry.definitions.isEmpty, entry.reference == nil, let web = online[Glossary.key(entry.abbreviation)], web.certain, let source = web.source, source.kind == "Wikipedia-introductie" {
-                return Self(term: entry.abbreviation, meaning: web.fullName + "\n" + web.explanation + (web.context.isEmpty ? "" : "\nIn this document: " + web.context), origin: "Online source · AI explanation · Wikipedia introduction · " + web.date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "en_US"))) + "\n" + source.url.absoluteString)
+            if own == nil, entry.definitions.isEmpty, entry.reference == nil, let web = online[Glossary.key(entry.abbreviation)], web.certain, let source = web.source, source.isWikipediaIntroduction {
+                let origin = wikipediaOrigin(source: source, retrievedAt: web.date)
+                return Self(term: entry.abbreviation, meaning: web.fullName + "\n" + web.explanation + (web.context.isEmpty ? "" : "\nIn this document: " + web.context), origin: origin)
             }
             return Self(term: entry.abbreviation, meaning: own ?? entry.definitions.first?.text ?? entry.reference?.meaning ?? "Meaning not established", origin: own != nil ? "Custom definition" : entry.definitions.first.map { "From document, PDF page \($0.page)" } ?? entry.reference.map { "Glossary: \($0.url.absoluteString)" } ?? "Unknown")
         }
+    }
+
+    static func wikipediaOrigin(source: GlossaryWebSource, retrievedAt: Date) -> String {
+        "Attribution: Wikipedia article and author history (\(source.url.absoluteString)). The Wikipedia source text and its adapted Foliance AI explanation are licensed under CC BY-SA 4.0 (\(GlossaryWebSource.wikipediaLicenseURL.absoluteString)). Foliance’s AI explanation is a modified paraphrase, not reviewed by Wikipedia; review the article and its licensing notices. Your original PDF and notes keep their own terms.\nRetrieved: " + retrievedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "en_US")))
     }
 }

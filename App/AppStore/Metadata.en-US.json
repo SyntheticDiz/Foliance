@@ -1,0 +1,12 @@
+{
+  "Name": "Foliance",
+  "Subtitle": "Read and review PDF reports",
+  "Promotional Text": "Review long PDFs with source passages beside the page, reusable work files, and a focused English reading workspace. Apple Intelligence is the default.",
+  "Description": "Read reports and meeting papers with the original PDF beside your notes and findings.\n\nFoliance is a free, open-source PDF reader for macOS. Choose Overview, Report, Project plan, or Meeting notes. Set a reading goal, optionally add a reference document and comparison criteria, then review summaries, findings, and questions with their source passages. Search locally, add notes, save selected passages, and export a PDF brief. Save your work in a .foliance file and reopen it later without starting an AI request.\n\nApple Intelligence is the default analysis provider and processes content on a compatible Mac. Optional online analysis is available through your own OpenAI API key with separate API billing, or an eligible ChatGPT plan. Foliance asks for document-sharing consent before sending task content to OpenAI. Provider choice is explicit; there is no automatic cloud or billing fallback. Availability, models, and usage limits depend on your device or OpenAI account.\n\nImport PDFs with selectable text. For image-only scans, run OCR before import. Check extracted tables against the original.\n\nThe interface and new explanations are in English. Original source quotations and your notes remain in their original language. AI explanations can be incomplete or incorrect. A matched quote confirms where text appears, not that an interpretation is correct. Check important statements, conditions, and amounts against the source.",
+  "Keywords": "PDF,reader,documents,reports,meeting notes,project plans,citations,search,summaries,productivity",
+  "Primary Category": "Productivity",
+  "Price": "Free",
+  "Support URL": "https://syntheticdiz.github.io/Foliance/support.html",
+  "Marketing URL": "https://syntheticdiz.github.io/Foliance/",
+  "Privacy Policy URL": "https://syntheticdiz.github.io/Foliance/privacy.html"
+}

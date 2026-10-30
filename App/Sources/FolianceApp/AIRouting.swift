@@ -16,7 +16,11 @@ enum AIRouting {
     static func resolve(_ requested: String,
                         appleUnavailable: () -> String? = { AppleAIService.unavailability() },
                         openAIReady: () -> Bool = { OpenAIConsent.isGranted() && OpenAICredentials.shared.hasAPIKey },
-                        chatGPTPlanReady: () async -> Bool = { await ChatGPTSubscriptionAccount.shared.canUsePlan && OpenAIConsent.isGranted() }) async throws -> String {
+                        chatGPTPlanReady: () async -> Bool = {
+                            guard OpenAIConsent.isGranted() else { return false }
+                            await ChatGPTSubscriptionAccount.shared.restoreSessionIfNeeded()
+                            return await ChatGPTSubscriptionAccount.shared.canUsePlan
+                        }) async throws -> String {
         try Task.checkCancellation()
         if requested.hasPrefix("chatgpt:") {
             guard AIConfiguration.chatGPTSelection(requested) != nil else { throw ChatGPTService.ChatGPTError.invalidRequest }

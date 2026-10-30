@@ -35,13 +35,13 @@ final class FolianceReleaseTests: XCTestCase {
         XCTAssertEqual(info["CFBundleName"] as? String, "Foliance")
         XCTAssertEqual(info["CFBundleDisplayName"] as? String, "Foliance")
         XCTAssertEqual(info["CFBundleShortVersionString"] as? String, "1.0.0")
-        XCTAssertEqual(info["CFBundleVersion"] as? String, "3")
+        XCTAssertEqual(info["CFBundleVersion"] as? String, "4")
         XCTAssertEqual(Set(info["CFBundleLocalizations"] as? [String] ?? []), Set(["en"]))
         XCTAssertEqual(PatchNotesView.version, info["CFBundleShortVersionString"] as? String)
 
         let notes = try String(contentsOf: projectRoot.appendingPathComponent("Sources/FolianceApp/PatchNotesView.swift"), encoding: .utf8)
         XCTAssertTrue(notes.contains("Foliance 1.0.0"))
-        XCTAssertTrue(notes.contains("English interface update · build 3"))
+        XCTAssertTrue(notes.contains("Saved ChatGPT sessions · build 4"))
         XCTAssertFalse(notes.contains("5.32."), "The first release must not carry forward predecessor history.")
     }
 

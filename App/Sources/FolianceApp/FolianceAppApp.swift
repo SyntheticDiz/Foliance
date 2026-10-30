@@ -154,16 +154,29 @@ extension Notification.Name {
 @main
 struct FolianceApp: App {
     @NSApplicationDelegateAdaptor(FolianceAppDelegate.self) private var appDelegate
+    private var screenshotCaptureEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "FolianceScreenshotCapture") as? Bool == true
+    }
+    @ViewBuilder
+    private var mainReaderContent: some View {
+        let reader = SimpleView().frame(minWidth: 900, minHeight: 620).tint(SPTheme.accent)
+            .environment(\.locale, Locale(identifier: "en_US"))
+            .buttonStyle(FocusSecondaryButtonStyle())
+            .disclosureGroupStyle(FullRowDisclosureGroupStyle())
+        if screenshotCaptureEnabled {
+            reader.background(AppStoreCaptureWindow().frame(width: 0, height: 0)
+                .allowsHitTesting(false).accessibilityHidden(true))
+        } else {
+            reader
+        }
+    }
     init() {
         ForkSetup.migrate()
         AppleAISettings.migrate()
     }
     var body: some Scene {
         WindowGroup("Foliance") {
-            SimpleView().frame(minWidth: 900, minHeight: 620).tint(SPTheme.accent)
-                .environment(\.locale, Locale(identifier: "en_US"))
-                .buttonStyle(FocusSecondaryButtonStyle())
-                .disclosureGroupStyle(FullRowDisclosureGroupStyle())
+            mainReaderContent
                 .onAppear {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)

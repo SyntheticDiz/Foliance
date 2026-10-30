@@ -18,7 +18,7 @@ struct GlossaryView: View {
     private var documentKey: String { LocalCache.key(document.pages) }
     private func own(_ entry: GlossaryEntry) -> String? { personal.meaning(entry.abbreviation, document: documentKey) }
     private func web(_ entry: GlossaryEntry) -> OnlineGlossaryResult? {
-        guard let result = online[Glossary.key(entry.abbreviation)], result.source == nil || result.source?.kind == "Wikipedia-introductie" else { return nil }
+        guard let result = online[Glossary.key(entry.abbreviation)], result.source == nil || result.source?.isWikipediaIntroduction == true else { return nil }
         return result
     }
     private func meaning(_ entry: GlossaryEntry) -> String {
@@ -58,7 +58,7 @@ struct GlossaryView: View {
                             if let result = web(entry), own(entry) == nil && entry.definitions.isEmpty && entry.reference == nil {
                                 Text(result.explanation).textSelection(.enabled)
                                 if !result.context.isEmpty { Text("In this document: " + result.context).foregroundStyle(.secondary).textSelection(.enabled) }
-                                if let source = result.source { Link(UIStrings.text("View source") + " · " + source.title, destination: source.url).font(.callout) }
+                                if let source = result.source { Link(UIStrings.text("Wikipedia article and author history") + " · " + source.title, destination: source.url).font(.callout) }
                                 Text(UIStrings.text("Retrieved") + ": " + result.date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(Locale(identifier: "en_US"))) + (result.fresh ? "" : " · " + UIStrings.text("older than 30 days"))).font(.caption).foregroundStyle(.secondary)
                             }
                             DisclosureGroup(UIStrings.text("Sources and other meanings")) {
@@ -72,9 +72,11 @@ struct GlossaryView: View {
                                         Link(UIStrings.text("Official explanation"), destination: reference.url)
                                     }
                                     if let result = web(entry), let source = result.source {
-                                        Text(UIStrings.text(source.kind)).font(.caption).foregroundStyle(.secondary)
+                                        Text(UIStrings.text(source.displayKind)).font(.caption).foregroundStyle(.secondary)
                                         if !result.quote.isEmpty { Text(UIStrings.text("Source quote") + ": ‘" + result.quote + "’").textSelection(.enabled) }
-                                        Link(source.title, destination: source.url)
+                                        Link(UIStrings.text("Wikipedia text and adapted explanation: CC BY-SA 4.0"), destination: GlossaryWebSource.wikipediaLicenseURL)
+                                        Text(UIStrings.text("The AI explanation is a modified paraphrase, not reviewed by Wikipedia. Review the linked article and its licensing notices. CC BY-SA 4.0 applies to the Wikipedia text and its adapted explanation; your original PDF and notes keep their own terms."))
+                                            .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                                     }
                                     if let first = entry.occurrences.first { Text(first.excerpt).font(.callout).textSelection(.enabled) }
                                     ForEach(entry.occurrences, id: \.page) { occurrence in

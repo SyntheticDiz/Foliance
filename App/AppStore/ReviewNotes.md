@@ -1,17 +1,33 @@
-# Foliance review notes
+# App Review notes
 
-Foliance is an English-language native macOS productivity app for reading and preparing PDF documents. Foliance is free and open source under MIT. No Foliance login, backend, subscription sale or in-app purchase is required.
+Foliance is a free, open-source macOS PDF reader. It has no Foliance login, developer backend, in-app purchases, subscription sales, advertising or analytics. The interface and new app-authored explanations are in English. Original document quotations and user-entered notes remain unchanged.
 
-Apple Intelligence is the default provider. On-device analysis requires a compatible Apple silicon Mac with macOS 26 or later, enabled Apple Intelligence and its model downloaded. PDF reading, local search, saved results and non-AI functions remain available without a model. There is no automatic cloud fallback.
+## Basic review path
 
-Optional OpenAI API analysis is configured in Settings. Each user supplies their own API key, stored in this app’s non-synchronizing Keychain entry, and explicitly consents to share task content. The user needs their own compatible OpenAI model access and API billing; ChatGPT subscription billing is separate. Missing consent or a key blocks OpenAI requests. Consent can be revoked and the key removed. Requests use HTTPS directly to OpenAI with Responses storage disabled; abuse-monitoring retention can still apply. No publisher-funded AI service or embedded credentials are provided.
+1. Open a PDF with selectable text using **Add PDF**. A fictional selectable-text sample, Sample.pdf, is attached for review and is also available in the project source at `AppStore/Sample.pdf`; it is not required by the app. Any PDF with a searchable text layer can be used.
+2. Review the PDF beside the **Overview**. Choose **Report**, **Project plan**, or **Meeting notes** to add a source-linked review. A reading goal and an optional reference document with comparison criteria can guide analysis.
+3. Open a finding's source, inspect the full passage, add a note or selected passage, and try local search.
+4. Export a PDF brief or save a `.foliance` work document. Reopening saved work does not start AI requests.
 
-For review, open the fictional sample PDF at AppStore/Sample.pdf from the source materials or any PDF with selectable text. Choose Add PDF and inspect the side-by-side reader. Overview is the default reading profile. Report, Project plan and Meeting notes add source-linked relevance reviews. Try a reading goal, inspect a passage and its source page, save a work document and export a PDF brief. Reopening saved work does not trigger AI requests. Original quotations and user notes remain unchanged in English exports.
+## AI providers and consent
 
-The optional Continue with ChatGPT path uses OpenAI’s documented open-source flow: loopback OAuth with PKCE, state and nonce checks, signed ID-token verification and explicit plan-usage scope validation. Eligible usage is funded by the selected ChatGPT plan or available credits; Foliance does not sell access or direct users to an upgrade purchase. Account models are retrieved from OpenAI, and no provider or billing fallback is automatic. The app does not obtain ChatGPT conversations. The temporary callback listener binds only to 127.0.0.1.
+Apple Intelligence is the default provider and processes analysis on a compatible Apple silicon Mac running macOS 26 or later, with Apple Intelligence enabled and its model available. PDF reading, local search, saved results and other non-AI functions do not require an AI provider. There is no automatic cloud fallback.
 
-The sandbox permits user-selected read/write files, security-scoped bookmarks for recent work, and outbound networking for optional OpenAI connections and a loopback-only OAuth callback listener. It does not browse another application’s storage or import settings/credentials. There are no advertising or analytics SDKs.
+Online analysis is optional. A user may choose OpenAI API access with their own API key and separate API billing, or **Continue with ChatGPT** using an eligible account and its plan/credit limits. These are distinct providers and billing paths. Before task content is sent to OpenAI, the user must grant document-sharing consent in Foliance. Missing consent, credentials or plan access blocks the request; Foliance does not silently switch providers. No review credentials or account are supplied. Reviewers can test the reading workflow without signing in; access to optional account features depends on a reviewer-owned eligible account.
 
-Ordinary image-only scans require a searchable text layer before import; table extraction may need review. AI interpretations can be incomplete or incorrect. Original source passages remain accessible, with uncertain or unprocessed content marked in the interface.
+OpenAI requests use HTTPS directly, with Responses storage disabled. This does not guarantee zero retention; OpenAI abuse-monitoring retention may apply. ChatGPT sign-in obtains only the account details and permissions described in the public privacy policy; it does not access ChatGPT conversations. The OAuth callback listener binds only to `127.0.0.1`.
 
-OpenAI integration reference: https://developers.openai.com/siwc/token-sharing-open-source (free/open-source ChatGPT plan usage). The audited application source is published at https://github.com/SyntheticDiz/Foliance/tree/main/App. No user’s credentials are provided as a review/demo account. On-device analysis and non-AI reading remain independently available; reviewer access to optional account features must be arranged before submission.
+## File and source behavior
+
+The sandbox uses user-selected files and security-scoped bookmarks. Work documents can contain the original PDF, reference material where applicable, analysis, notes, selected passages and reader state. They are stored where the user chooses. Reopening them performs no AI request.
+
+Ordinary image-only scans need a searchable text layer before import. Table extraction can require review; the app does not claim full-page OCR for every scan. AI interpretations can be incomplete or incorrect. A matched quotation establishes its location in the source, not the correctness of an explanation. Important amounts, conditions and conclusions should be checked in the original PDF.
+
+## Public information
+
+- Support: https://syntheticdiz.github.io/Foliance/support.html
+- Privacy policy: https://syntheticdiz.github.io/Foliance/privacy.html
+- Marketing page: https://syntheticdiz.github.io/Foliance/
+- Public source: https://github.com/SyntheticDiz/Foliance/tree/main/App
+
+The App Store privacy questionnaire must be completed separately in App Store Connect based on the final implementation and Apple's current questions. These notes do not assert seller legal status, rights ownership or a publisher contact address.

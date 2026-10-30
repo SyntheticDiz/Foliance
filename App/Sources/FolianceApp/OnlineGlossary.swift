@@ -1,11 +1,25 @@
 import Foundation
 
 struct GlossaryWebSource: Codable, Sendable {
+    static let wikipediaLicenseURL = URL(string: "https://creativecommons.org/licenses/by-sa/4.0/")!
+    private static let currentWikipediaKind = "Wikipedia introduction"
+    private static let legacyWikipediaKind = "Wikipedia-introductie"
+
     let title: String
     let url: URL
     let text: String
     let kind: String
     var retrievedAt: Date = Date()
+
+    /// Accept the English provider value and already-saved Dutch-era values.
+    /// New search results are restricted to the English Wikipedia host below.
+    var isWikipediaIntroduction: Bool {
+        let supportedKind = kind == Self.currentWikipediaKind || kind == Self.legacyWikipediaKind
+        let supportedHost = url.host == "en.wikipedia.org" || url.host == "nl.wikipedia.org"
+        return supportedKind && supportedHost
+    }
+
+    var displayKind: String { Self.currentWikipediaKind }
 }
 struct OnlineGlossaryResult: Codable, Sendable {
     let term: String
@@ -56,7 +70,7 @@ enum GlossaryWebSearch {
     static func request(term: String, provider: String) throws -> URLRequest {
         guard term.range(of: #"^[\p{L}\p{N}][\p{L}\p{N}.–-]{1,35}$"#, options: .regularExpression) != nil else { throw AppError(message: "This abbreviation is not suitable for automatic lookup.") }
         guard provider == "wikipedia" else { throw AppError(message: "Unknown search provider.") }
-        var c = URLComponents(string: "https://nl.wikipedia.org/w/api.php")!
+        var c = URLComponents(string: "https://en.wikipedia.org/w/api.php")!
         c.queryItems = ["action":"query", "format":"json", "formatversion":"2", "generator":"search", "gsrsearch":"\"\(term)\"", "gsrlimit":"3", "prop":"extracts|info", "exintro":"1", "explaintext":"1", "exlimit":"3", "exchars":"1200", "inprop":"url", "redirects":"1"].map { .init(name: $0.key, value: $0.value) }
         var request = URLRequest(url: c.url!); request.timeoutInterval = 25
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -85,7 +99,7 @@ enum GlossaryWebSearch {
         let values = (object["query"] as? [String: Any])?["pages"] as? [[String: Any]] ?? []
         let ordered = values.sorted { ($0["index"] as? Int ?? 999) < ($1["index"] as? Int ?? 999) }
         return ordered.compactMap { value -> GlossaryWebSource? in
-            guard let url = safeURL(value["fullurl"] as? String ?? ""), url.host == "nl.wikipedia.org", let title = value["title"] as? String else { return nil }
+            guard let url = safeURL(value["fullurl"] as? String ?? ""), url.host == "en.wikipedia.org", let title = value["title"] as? String else { return nil }
             let text = value["extract"] as? String ?? ""
             guard !text.isEmpty else { return nil }
             return GlossaryWebSource(title: title, url: url, text: text, kind: "Wikipedia introduction")

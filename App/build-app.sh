@@ -74,14 +74,19 @@ python3 scripts/icon-catalog.py "$PROJECT_DIR/.build/Assets.xcassets/AppIcon.app
 xcrun actool --compile "$APP_DIR/Contents/Resources" --platform macosx \
     --minimum-deployment-target 26.0 --app-icon AppIcon \
     --output-partial-info-plist "$PROJECT_DIR/.build/icon-info.plist" "$PROJECT_DIR/.build/Assets.xcassets" >/dev/null
-python3 - "$APP_DIR/Contents/Info.plist" "$PROJECT_DIR/.build/icon-info.plist" <<'PY'
+python3 - "$APP_DIR/Contents/Info.plist" "$PROJECT_DIR/.build/icon-info.plist" "$MODE" "${FOLIANCE_SCREENSHOT_CAPTURE:-}" <<'PY'
 import sys,plistlib
 with open(sys.argv[1],'rb') as f: main=plistlib.load(f)
 with open(sys.argv[2],'rb') as f: main.update(plistlib.load(f))
+mode,capture=sys.argv[3:5]
 # Use the same canonical icon resource in the bundle and at runtime. Keep the
 # compiled AppIcon catalog alongside it for the 1024-pixel store artwork.
 main['CFBundleIconFile']='Foliance'
 main.pop('CFBundleIconName',None)
+# A screenshot-only window size is available on opt-in preview builds. Never
+# carry the capture flag into a store build, even if the environment sets it.
+if mode=='preview' and capture=='1': main['FolianceScreenshotCapture']=True
+else: main.pop('FolianceScreenshotCapture',None)
 with open(sys.argv[1],'wb') as f: plistlib.dump(main,f)
 PY
 plutil -lint "$APP_DIR/Contents/Info.plist" "$APP_DIR/Contents/Resources/PrivacyInfo.xcprivacy"

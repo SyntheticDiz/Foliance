@@ -5,9 +5,11 @@ import argparse
 import json
 import os
 import re
+import struct
 import subprocess
 import sys
 import urllib.parse
+import zlib
 from pathlib import Path
 
 
@@ -20,6 +22,14 @@ SIGNING_SETTINGS = {
     "FOLIANCE_TEAM_ID": "teamID",
 }
 IDENTITY_LINE = re.compile(r'^\s*\d+\)\s+([0-9A-Fa-f]{40})\s+"([^"]+)"')
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+MAX_SCREENSHOTS = 10
+SCREENSHOT_DIMENSIONS = {
+    (1280, 800),
+    (1440, 900),
+    (2560, 1600),
+    (2880, 1800),
+}
 
 
 def parse_args():
@@ -115,6 +125,145 @@ def check_signing_identities(app_identity, installer_identity, issues):
             issues.append(f"Configured {label.lower()} identity is not the required certificate type.")
 
 
+def inspect_screenshot_png(path):
+    """Validate a PNG's chunks, decoded scanlines and App Store dimensions."""
+    try:
+        data = path.read_bytes()
+    except OSError as error:
+        raise ValueError(f"could not be read ({error})") from error
+    if len(data) < len(PNG_SIGNATURE) or data[:8] != PNG_SIGNATURE:
+        raise ValueError("is empty or does not have a PNG signature")
+
+    offset = 8
+    dimensions = None
+    bit_depth = color_type = interlace = None
+    seen_ihdr = seen_plte = seen_idat = seen_iend = False
+    idat_finished = False
+    palette = False
+    idat_data = bytearray()
+    while offset < len(data):
+        if len(data) - offset < 12:
+            raise ValueError("has a truncated PNG chunk")
+        length = struct.unpack_from(">I", data, offset)[0]
+        chunk_type = data[offset + 4:offset + 8]
+        payload_start = offset + 8
+        payload_end = payload_start + length
+        chunk_end = payload_end + 4
+        if chunk_end > len(data):
+            raise ValueError("has a truncated PNG chunk payload")
+        payload = data[payload_start:payload_end]
+        expected_crc = struct.unpack_from(">I", data, payload_end)[0]
+        actual_crc = zlib.crc32(chunk_type + payload) & 0xFFFFFFFF
+        if actual_crc != expected_crc:
+            raise ValueError("contains a PNG chunk with an invalid checksum")
+        if not seen_ihdr and chunk_type != b"IHDR":
+            raise ValueError("does not begin with an IHDR chunk")
+        if seen_idat and chunk_type != b"IDAT":
+            idat_finished = True
+
+        if chunk_type == b"IHDR":
+            if seen_ihdr or offset != 8 or length != 13:
+                raise ValueError("has an invalid IHDR chunk")
+            width, height, bit_depth, color_type, compression, filtering, interlace = struct.unpack(
+                ">IIBBBBB", payload
+            )
+            if (width, height) not in SCREENSHOT_DIMENSIONS:
+                allowed = ", ".join(f"{w}x{h}" for w, h in sorted(SCREENSHOT_DIMENSIONS))
+                raise ValueError(f"has unsupported dimensions {width}x{height}; accepted sizes are {allowed}")
+            legal_depths = {
+                0: {1, 2, 4, 8, 16},
+                2: {8, 16},
+                3: {1, 2, 4, 8},
+                4: {8, 16},
+                6: {8, 16},
+            }
+            if color_type not in legal_depths or bit_depth not in legal_depths[color_type]:
+                raise ValueError("has an invalid PNG color type or bit depth")
+            if compression != 0 or filtering != 0 or interlace not in (0, 1):
+                raise ValueError("uses unsupported PNG compression, filtering or interlace settings")
+            dimensions = (width, height)
+            seen_ihdr = True
+        elif chunk_type == b"PLTE":
+            if seen_plte or seen_idat or color_type in (0, 4) or not 3 <= length <= 768 or length % 3:
+                raise ValueError("has an invalid PLTE chunk")
+            seen_plte = palette = True
+        elif chunk_type == b"IDAT":
+            if idat_finished:
+                raise ValueError("has nonconsecutive IDAT chunks")
+            seen_idat = True
+            idat_data.extend(payload)
+        elif chunk_type == b"IEND":
+            if length != 0 or not seen_idat:
+                raise ValueError("has an invalid IEND chunk")
+            seen_iend = True
+            offset = chunk_end
+            if offset != len(data):
+                raise ValueError("contains data after IEND")
+            break
+        elif not (chunk_type[0] & 0x20):
+            raise ValueError(f"contains an unsupported critical PNG chunk {chunk_type!r}")
+
+        offset = chunk_end
+
+    if not seen_iend or not dimensions or not idat_data:
+        raise ValueError("is missing required PNG image data or IEND")
+    if color_type == 3 and not palette:
+        raise ValueError("uses indexed color without a PLTE palette")
+
+    try:
+        decoder = zlib.decompressobj()
+        decoded = decoder.decompress(bytes(idat_data)) + decoder.flush()
+    except zlib.error as error:
+        raise ValueError("contains corrupt compressed image data") from error
+    if not decoder.eof or decoder.unused_data or decoder.unconsumed_tail:
+        raise ValueError("contains incomplete or trailing compressed image data")
+
+    width, height = dimensions
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[color_type]
+    bits_per_pixel = channels * bit_depth
+    pass_rows = []
+    if interlace == 0:
+        pass_rows = [((width * bits_per_pixel + 7) // 8)] * height
+    else:
+        starts_x, starts_y = (0, 4, 0, 2, 0, 1, 0), (0, 0, 4, 0, 2, 0, 1)
+        steps_x, steps_y = (8, 8, 4, 4, 2, 2, 1), (8, 8, 8, 4, 4, 2, 2)
+        for sx, sy, dx, dy in zip(starts_x, starts_y, steps_x, steps_y):
+            pass_width = max(0, (width - sx + dx - 1) // dx)
+            pass_height = max(0, (height - sy + dy - 1) // dy)
+            if pass_width and pass_height:
+                row_bytes = (pass_width * bits_per_pixel + 7) // 8
+                pass_rows.extend([row_bytes] * pass_height)
+    if len(decoded) != sum(row_bytes + 1 for row_bytes in pass_rows):
+        raise ValueError("has an invalid decoded image-data length")
+    cursor = 0
+    for row_bytes in pass_rows:
+        if decoded[cursor] > 4:
+            raise ValueError("contains an invalid PNG row filter")
+        cursor += row_bytes + 1
+    return dimensions
+
+
+def check_screenshots(screenshots_dir, allow_missing, issues, warnings):
+    screenshots = sorted(
+        path for path in screenshots_dir.iterdir()
+        if path.is_file() and path.suffix.casefold() == ".png"
+    ) if screenshots_dir.is_dir() else []
+    if not screenshots:
+        message = "Capture final native PNG screenshots for App Store Connect before submission."
+        if allow_missing:
+            warnings.append(message)
+        else:
+            issues.append(message)
+        return
+    if len(screenshots) > MAX_SCREENSHOTS:
+        issues.append(f"Found {len(screenshots)} screenshot PNG files; App Store Connect allows at most {MAX_SCREENSHOTS}.")
+    for screenshot in screenshots:
+        try:
+            inspect_screenshot_png(screenshot)
+        except ValueError as error:
+            issues.append(f"Invalid screenshot {screenshot.name}: {error}.")
+
+
 def main():
     args = parse_args()
     issues = []
@@ -155,13 +304,7 @@ def main():
     )
 
     screenshots_dir = ROOT / "AppStore/Screenshots"
-    screenshots = list(screenshots_dir.glob("*.png")) if screenshots_dir.exists() else []
-    if not screenshots:
-        message = "Capture final native screenshots for App Store Connect before submission."
-        if args.allow_missing_screenshots:
-            warnings.append(message)
-        else:
-            issues.append(message)
+    check_screenshots(screenshots_dir, args.allow_missing_screenshots, issues, warnings)
 
     if issues:
         print("App Store publisher prerequisites still required:")

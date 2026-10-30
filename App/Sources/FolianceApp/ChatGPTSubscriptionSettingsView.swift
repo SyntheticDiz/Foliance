@@ -61,6 +61,9 @@ struct ChatGPTSubscriptionSettingsView: View {
                 if let error = account.error {
                     Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled)
                 }
+                if !account.didRestoreSession, account.error != nil, !account.busy {
+                    Button("Retry account restore") { Task { await account.restoreSessionIfNeeded(loadCatalog: true) } }
+                }
 
                 HStack {
                     FocusMenuPicker("ChatGPT account", selection: accountSelection, selectedTitle: selectedAccountTitle) {
@@ -125,7 +128,7 @@ struct ChatGPTSubscriptionSettingsView: View {
             }.padding(8).frame(maxWidth: .infinity, alignment: .leading)
         }
         .task {
-            if account.isConnected && account.models.isEmpty { await account.refreshModels() }
+            await account.restoreSessionIfNeeded(loadCatalog: true)
         }
         .buttonStyle(FocusSecondaryButtonStyle())
     }

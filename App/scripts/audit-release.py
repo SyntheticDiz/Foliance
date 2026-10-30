@@ -3,8 +3,10 @@ import plistlib,re,struct,subprocess,sys,tempfile
 from pathlib import Path
 app=Path(sys.argv[1]); failures=[]
 with (app/'Contents/Info.plist').open('rb') as f: info=plistlib.load(f)
-for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'3','LSMinimumSystemVersion':'26.0'}.items():
+for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'4','LSMinimumSystemVersion':'26.0'}.items():
     if info.get(key)!=value: failures.append(f'Incorrect {key}')
+if (app/'Contents/embedded.provisionprofile').exists() and 'FolianceScreenshotCapture' in info:
+    failures.append('Store build must not enable preview screenshot capture')
 resources=app/'Contents/Resources'
 if info.get('CFBundleIconFile')!='Foliance': failures.append('Bundle icon file must select Foliance.icns')
 for key in ('CFBundleIconName','CFBundleIcons','CFBundleIcons~mac'):
