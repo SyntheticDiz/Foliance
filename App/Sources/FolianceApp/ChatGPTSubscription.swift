@@ -81,7 +81,7 @@ enum ChatGPTSubscriptionError: LocalizedError, Sendable, Equatable {
         case .modelsUnavailable: "Foliance could not load models for this ChatGPT account."
         case .notConnected: "Connect a ChatGPT account that has granted plan usage to Foliance."
         case .refreshFailed: "The ChatGPT session could not be renewed. Sign in again."
-        case .keychainFailure: "Foliance could not access or update the ChatGPT session in this Mac’s Keychain. Unlock Keychain and retry."
+        case .keychainFailure: "Foliance could not read or update its saved ChatGPT session in macOS Keychain. Check Keychain access and try again."
         }
     }
 }
@@ -494,12 +494,14 @@ final class ChatGPTSubscriptionAccount: ObservableObject {
             guard let profile = try await connection.savedProfile() else {
                 isConnected = false; canUsePlan = false; needsPlanConsent = false; email = ""; models = []
                 status = snapshot.selectedID == nil ? "Not connected to ChatGPT." : "Saved account. Sign in to reconnect."
+                error = nil
                 didRestoreSession = true
                 return
             }
             isConnected = true; canUsePlan = profile.canUsePlan; email = profile.email
             needsPlanConsent = !profile.canUsePlan
             status = profile.canUsePlan ? "Connected to ChatGPT plan usage." : "Connected. ChatGPT plan usage permission was not granted."
+            error = nil
             didRestoreSession = true
         } catch {
             self.error = error.localizedDescription
@@ -894,20 +896,38 @@ actor ChatGPTSubscriptionConnection {
 }
 
 final class ChatGPTSubscriptionKeychain: ChatGPTSubscriptionCredentialStore, @unchecked Sendable {
+    typealias CopyMatching = (CFDictionary, UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus
+
+    private let copyMatching: CopyMatching
+    private let defaults: UserDefaults
+
+    init(copyMatching: @escaping CopyMatching = SecItemCopyMatching, defaults: UserDefaults = .standard) {
+        self.copyMatching = copyMatching
+        self.defaults = defaults
+    }
+
     func loadAll() throws -> [ChatGPTSubscriptionCredential] {
         var query = Self.baseQuery
         query[kSecReturnAttributes as String] = true
-        query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitAll
         var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = copyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return [] }
         guard status == errSecSuccess, let rows = result as? [[String: Any]] else { throw ChatGPTSubscriptionError.keychainFailure }
         var credentials: [ChatGPTSubscriptionCredential] = []
         credentials.reserveCapacity(rows.count)
         for row in rows {
             guard let account = row[kSecAttrAccount as String] as? String,
-                  let data = row[kSecValueData as String] as? Data,
+                  account.range(of: #"^[A-Za-z0-9._-]+$"#, options: .regularExpression) != nil else {
+                throw ChatGPTSubscriptionError.keychainFailure
+            }
+            var secretQuery = accountQuery(account)
+            secretQuery[kSecReturnData as String] = true
+            secretQuery[kSecMatchLimit as String] = kSecMatchLimitOne
+            var secretResult: CFTypeRef?
+            let secretStatus = copyMatching(secretQuery as CFDictionary, &secretResult)
+            guard secretStatus == errSecSuccess,
+                  let data = secretResult as? Data,
                   let credential = try? JSONDecoder().decode(ChatGPTSubscriptionCredential.self, from: data),
                   credential.clientID == account,
                   account.range(of: #"^[A-Za-z0-9._-]+$"#, options: .regularExpression) != nil else {
@@ -937,10 +957,9 @@ final class ChatGPTSubscriptionKeychain: ChatGPTSubscriptionCredentialStore, @un
         } else if status != errSecSuccess { throw ChatGPTSubscriptionError.keychainFailure }
     }
 
-    func activeClientID() -> String? { UserDefaults.standard.string(forKey: ChatGPTSubscriptionStorageIdentity.activeClientIDDefaultsKey) }
+    func activeClientID() -> String? { defaults.string(forKey: ChatGPTSubscriptionStorageIdentity.activeClientIDDefaultsKey) }
 
     func setActiveClientID(_ clientID: String?) {
-        let defaults = UserDefaults.standard
         if let clientID { defaults.set(clientID, forKey: ChatGPTSubscriptionStorageIdentity.activeClientIDDefaultsKey) }
         else { defaults.removeObject(forKey: ChatGPTSubscriptionStorageIdentity.activeClientIDDefaultsKey) }
     }

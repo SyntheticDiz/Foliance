@@ -1,6 +1,6 @@
 # Foliance
 
-Foliance is a native macOS PDF reader for understanding reports, project plans and meeting papers while keeping original source passages in view. Version **1.0.0**, build **4**.
+Foliance is a native macOS PDF reader for understanding reports, project plans and meeting papers while keeping original source passages in view. Version **1.0.0**, build **5**.
 
 ## Use
 

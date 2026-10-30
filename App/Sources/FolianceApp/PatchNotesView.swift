@@ -9,7 +9,7 @@ struct PatchNotesView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Foliance 1.0.0").font(.title2.bold())
-                    Text("Saved ChatGPT sessions · build 4").font(.caption).foregroundStyle(.secondary)
+                    Text("Saved ChatGPT sessions · build 5").font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)

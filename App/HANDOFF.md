@@ -1,6 +1,6 @@
 # Foliance implementation and release status
 
-30 October 2026. Version 1.0.0, build 4. Current build 4 status below supersedes the historical build 3 records. Work is confined to this fork; the original application and its data were not changed.
+30 October 2026. Version 1.0.0, build 5. Current build 5 status below supersedes the historical build 3 and 4 records. Work is confined to this fork; the original application and its data were not changed.
 
 ## Product and interface
 
@@ -80,3 +80,19 @@ Apple received the initial build 4 installer, then rejected processing with ITMS
 The builder now recreates only its generated dist/preview or dist/store app bundle and copies files without extended attributes. Because macOS can still propagate a valid quarantine marker through cp -X, it removes that marker only from the validated profile’s generated bundle copy before signing. It preserves the downloaded original, its metadata and all system protections. The release audit fails if any bundle entry has a quarantine attribute. Shell/Python syntax and an offline xattr fixture passed. The clean signed universal package passed the audit; expansion confirmed no quarantined entries and that the embedded profile bytes equal the original. Clean package SHA-256: f925d6307402aa9fcbb48af02ad139945607e8b50cef3a0f4602d328292b0ff5 (log /private/tmp/foliance-build4-store-clean.log).
 
 Swift sources and tests remain byte-identical to the fully tested build 4 inputs, so no full test rerun was needed for this packaging-only correction. Apple permits reuse of a build number after failed processing; the corrected upload is still version 1.0.0, build 4. Transporter was installed and signed in by the user, and the corrected delivery has been started. The updated live privacy page was verified in the browser. No review submission or release has been performed.
+
+
+## Build 5 — native Keychain query correction
+
+A live Settings inspection of the normal preview showed saved-session restoration failing at Keychain access. Source review against Apple’s SecItemCopyMatching documentation found an invalid API combination in loadAll: kSecReturnData with kSecMatchLimitAll for generic-password items. Mock credential-store tests had not exercised that platform API contract. Build 5 changes the storage read to enumerate own-service account attributes, then request each specific credential with a single-item query. No other app’s Keychain or preferences may be accessed. Reuse the completed version 1.0.0 listing; select build 5 only after native verification and processing succeed. Build 4 remains historical upload material and is not the release candidate.
+
+
+## Build 5 verification and signing
+
+The final full offline suite passed with native services enabled: 784 registered tests, 66 skipped, 718 executed, zero failures (log /private/tmp/foliance-build5-all-tests-native.log). The independently staged 239-file public export passed 76 registered tests, 1 skipped, 75 executed, zero failures (log /private/tmp/foliance-build5-public-check/public-offline-tests.log). The public Swift/test input hash is 18312f6a274b5199ffaf4f042279cfe10a233dfd98b3f62e37dd66772a59fb35. Query-contract tests use an injected Security-function adapter, with no real Keychain writes or live AI/authentication.
+
+The normal universal preview passed its release audit and launched successfully. Native Settings now reports the expected disconnected/empty-account state instead of a Keychain read failure, confirming the invalid macOS query was fixed (Verification/build5-native-keychain-query.jpg). This is not a live ChatGPT sign-in test; no eligible account or session is currently saved in this local preview. Do not claim a real OpenAI token rotation was tested.
+
+The signed universal build 5 package passed the same audit, including the new quarantine guard. Expanding the installer confirmed no quarantine attributes and byte-identical embedded profile contents compared with the untouched original. Store and preview both declare build 5 and omit screenshot-capture mode. Package SHA-256: cba8a9aa24dc6ac0186b84c062c511283ac76bedf3c164ecd5d866e652e69d81 (log /private/tmp/foliance-build5-store.log).
+
+The initial build 4 upload failed with 91109; the clean retry processed successfully and is Ready to Submit in TestFlight. Neither build 4 upload is the intended release candidate. Build 5 delivery is being prepared to replace it; keep manual release and the completed version 1.0.0 listing.

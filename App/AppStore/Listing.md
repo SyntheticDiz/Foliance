@@ -4,6 +4,7 @@
 
 - **App:** Foliance · macOS · app ID `6828975143`
 - **Version:** 1.0.0
+- **Build status:** Build 4 was delivered but failed App Store processing with error 91109 and is not a release candidate. Build 5 is required.
 - **Name:** Foliance (reserved)
 - **Subtitle:** Read and review PDF reports
 - **Primary category:** Productivity
@@ -31,7 +32,8 @@ The App Privacy answers have been published after the required Apple legal certi
 
 ## Remaining release work
 
-- Validate the completed build 4 distribution-signed package with Transporter, upload it and associate it with version 1.0.0.
+- Complete the pending regression tests, native checks, release audit and distribution signing for build 5. Build 5 has not yet been verified or packaged.
+- Validate the expanded build 5 package, upload it with Transporter and wait for App Store processing. Do not select build 4 as the release candidate.
 - Optionally perform a live ChatGPT sign-in and model-catalog check with a user-owned account; this has not been done.
 - Submit the app for Apple review. Manual release is selected; the app has not been submitted or approved.
 

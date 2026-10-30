@@ -14,7 +14,7 @@ def list_xattrs_without_following_symlinks(path):
     return result.stdout.splitlines()
 
 with (app/'Contents/Info.plist').open('rb') as f: info=plistlib.load(f)
-for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'4','LSMinimumSystemVersion':'26.0'}.items():
+for key,value in {'CFBundleIdentifier':'app.foliance.mac','CFBundleExecutable':'Foliance','CFBundleShortVersionString':'1.0.0','CFBundleVersion':'5','LSMinimumSystemVersion':'26.0'}.items():
     if info.get(key)!=value: failures.append(f'Incorrect {key}')
 if (app/'Contents/embedded.provisionprofile').exists() and 'FolianceScreenshotCapture' in info:
     failures.append('Store build must not enable preview screenshot capture')

@@ -3,6 +3,85 @@ import XCTest
 @testable import FolianceApp
 
 final class ChatGPTSessionPersistenceTests: XCTestCase {
+    func testKeychainQueriesEnumerateAttributesThenFetchEachAccountSecretIndividually() throws {
+        let first = makeCredential(expiry: Date().addingTimeInterval(600))
+        var second = makeCredential(expiry: Date().addingTimeInterval(900))
+        second.clientID = "oaiapp-session-test-2"
+        second.subject = "subject-2"
+        second.email = "second@example.com"
+        let fixture = KeychainQueryFixture(credentials: [first, second])
+        let keychain = ChatGPTSubscriptionKeychain(copyMatching: fixture.copyMatching)
+
+        let restored = try keychain.loadAll()
+
+        XCTAssertEqual(Set(restored.map(\.clientID)), Set([first.clientID, second.clientID]))
+        XCTAssertEqual(Set(restored.map(\.subject)), Set([first.subject, second.subject]))
+        let queries = fixture.queries
+        XCTAssertEqual(queries.count, 3, "One attribute-only enumeration plus one secret fetch for each account.")
+        let enumeration = try XCTUnwrap(queries.first { $0[kSecMatchLimit as String] as? String == (kSecMatchLimitAll as String) })
+        XCTAssertEqual(enumeration[kSecReturnAttributes as String] as? Bool, true)
+        XCTAssertNil(enumeration[kSecReturnData as String], "A match-all query must not return password-item data.")
+        for account in [first.clientID, second.clientID] {
+            let secretQuery = try XCTUnwrap(queries.first { $0[kSecAttrAccount as String] as? String == account })
+            XCTAssertEqual(secretQuery[kSecMatchLimit as String] as? String, kSecMatchLimitOne as String)
+            XCTAssertEqual(secretQuery[kSecReturnData as String] as? Bool, true)
+            XCTAssertNil(secretQuery[kSecReturnAttributes as String])
+        }
+        for query in queries {
+            XCTAssertEqual(query[kSecAttrService as String] as? String, ChatGPTSubscriptionStorageIdentity.keychainService)
+            XCTAssertEqual(query[kSecAttrSynchronizable as String] as? Bool, false)
+            XCTAssertFalse(query[kSecReturnData as String] as? Bool == true &&
+                           query[kSecMatchLimit as String] as? String == (kSecMatchLimitAll as String),
+                           "Do not combine returnData with matchLimitAll for password items.")
+        }
+    }
+
+    func testEmptyKeychainEnumerationReturnsNoAccounts() throws {
+        let fixture = KeychainQueryFixture(credentials: [])
+        let keychain = ChatGPTSubscriptionKeychain(copyMatching: fixture.copyMatching)
+
+        XCTAssertTrue(try keychain.loadAll().isEmpty)
+        XCTAssertEqual(fixture.enumerationCount, 1)
+        XCTAssertEqual(fixture.queries.first?[kSecMatchLimit as String] as? String, kSecMatchLimitAll as String)
+    }
+
+    func testMissingScopedSecretAfterEnumerationFailsInsteadOfDroppingAccount() {
+        let credential = makeCredential(expiry: Date().addingTimeInterval(600))
+        let fixture = KeychainQueryFixture(credentials: [credential])
+        fixture.missingSecretAccount = credential.clientID
+        let keychain = ChatGPTSubscriptionKeychain(copyMatching: fixture.copyMatching)
+
+        XCTAssertThrowsError(try keychain.loadAll()) { error in
+            XCTAssertEqual(error as? ChatGPTSubscriptionError, .keychainFailure)
+        }
+        XCTAssertEqual(fixture.queries.count, 2, "The account is enumerated, then its scoped secret fetch fails visibly.")
+    }
+
+    func testKeychainEnumerationFailureIsRetriedInsteadOfCachedAsNoAccounts() async throws {
+        let first = makeCredential(expiry: Date().addingTimeInterval(600))
+        var second = makeCredential(expiry: Date().addingTimeInterval(900))
+        second.clientID = "oaiapp-session-test-2"
+        second.subject = "subject-2"
+        let fixture = KeychainQueryFixture(credentials: [first, second])
+        fixture.failEnumerations = 1
+        let suite = "ChatGPTSubscriptionKeychainTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let keychain = ChatGPTSubscriptionKeychain(copyMatching: fixture.copyMatching, defaults: defaults)
+        let connection = ChatGPTSubscriptionConnection(store: keychain)
+
+        do {
+            _ = try await connection.accountSnapshot()
+            XCTFail("A Keychain query error must not appear as an empty saved-account list.")
+        } catch {
+            XCTAssertEqual(error as? ChatGPTSubscriptionError, .keychainFailure)
+        }
+
+        let snapshot = try await connection.accountSnapshot()
+        XCTAssertEqual(Set(snapshot.accounts.map(\.id)), Set([first.clientID, second.clientID]))
+        XCTAssertEqual(fixture.enumerationCount, 2, "The failed read should not cache an empty account set.")
+    }
+
     func testRestoredAccountRenewsExpiredTokenAndReloadsCatalogWithoutOpeningBrowser() async throws {
         let credential = makeCredential(expiry: Date(timeIntervalSince1970: 1))
         let store = SessionCredentialStore(credentials: [credential], activeClientID: credential.clientID)
@@ -83,9 +162,10 @@ final class ChatGPTSessionPersistenceTests: XCTestCase {
 
         store.setReadFailure(false)
         await account.restoreSessionIfNeeded()
-        let retriedRestore = await MainActor.run { (account.didRestoreSession, account.isConnected) }
+        let retriedRestore = await MainActor.run { (account.didRestoreSession, account.isConnected, account.error) }
         XCTAssertTrue(retriedRestore.0)
         XCTAssertTrue(retriedRestore.1)
+        XCTAssertNil(retriedRestore.2, "A successful restore clears the stale Keychain error.")
         let restoredProfile = try await connection.savedProfile()
         let profile = try XCTUnwrap(restoredProfile)
         XCTAssertEqual(profile.subject, credential.subject)
@@ -376,6 +456,54 @@ private final class SessionCredentialStore: ChatGPTSubscriptionCredentialStore, 
     func setActiveClientID(_ clientID: String?) { lock.lock(); selectedID = clientID; lock.unlock() }
     func setReadFailure(_ value: Bool) { lock.lock(); readFailure = value; lock.unlock() }
     func setSaveFailure(_ value: Bool) { lock.lock(); saveFailure = value; lock.unlock() }
+}
+
+private final class KeychainQueryFixture {
+    private let lock = NSLock()
+    private let dataByAccount: [String: Data]
+    private var recordedQueries: [[String: Any]] = []
+    var failEnumerations = 0
+    var missingSecretAccount: String?
+
+    var queries: [[String: Any]] { lock.lock(); defer { lock.unlock() }; return recordedQueries }
+    var enumerationCount: Int { queries.filter { $0[kSecMatchLimit as String] as? String == (kSecMatchLimitAll as String) }.count }
+
+    init(credentials: [ChatGPTSubscriptionCredential]) {
+        dataByAccount = Dictionary(uniqueKeysWithValues: credentials.map { credential in
+            (credential.clientID, (try? JSONEncoder().encode(credential)) ?? Data())
+        })
+    }
+
+    func copyMatching(_ cfQuery: CFDictionary, _ result: UnsafeMutablePointer<CFTypeRef?>?) -> OSStatus {
+        let query = cfQuery as NSDictionary as? [String: Any] ?? [:]
+        lock.lock()
+        recordedQueries.append(query)
+        let currentFailCount = failEnumerations
+        if query[kSecMatchLimit as String] as? String == (kSecMatchLimitAll as String), currentFailCount > 0 {
+            failEnumerations -= 1
+            lock.unlock()
+            return errSecInteractionNotAllowed
+        }
+        lock.unlock()
+
+        guard query[kSecAttrService as String] as? String == ChatGPTSubscriptionStorageIdentity.keychainService,
+              query[kSecAttrSynchronizable as String] as? Bool == false else { return errSecItemNotFound }
+        if query[kSecMatchLimit as String] as? String == (kSecMatchLimitAll as String) {
+            guard query[kSecReturnAttributes as String] as? Bool == true,
+                  query[kSecReturnData as String] == nil else { return errSecParam }
+            let rows = dataByAccount.keys.sorted().map { [kSecAttrAccount as String: $0] as NSDictionary }
+            result?.pointee = rows as NSArray
+            return errSecSuccess
+        }
+        guard query[kSecMatchLimit as String] as? String == (kSecMatchLimitOne as String),
+              query[kSecReturnData as String] as? Bool == true,
+              query[kSecReturnAttributes as String] == nil,
+              let account = query[kSecAttrAccount as String] as? String,
+              account != missingSecretAccount,
+              let data = dataByAccount[account] else { return errSecItemNotFound }
+        result?.pointee = data as CFData
+        return errSecSuccess
+    }
 }
 
 private final class SessionURLProtocolFixture: URLProtocol, @unchecked Sendable {
