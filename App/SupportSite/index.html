@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f0f2f5">
+  <meta name="description" content="Foliance is a Mac PDF reader for source-linked summaries, useful reading profiles, notes, local search, and export.">
+  <title>Foliance — Read with the source in reach</title>
+  <link rel="icon" type="image/svg+xml" href="assets/foliance.svg?v=2">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="site.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="index.html" aria-label="Foliance home"><img src="assets/foliance.svg?v=2" width="36" height="36" alt=""><span>Foliance</span></a>
+    <nav class="site-nav" aria-label="Main navigation"><a href="#reader">How it works</a><a href="support.html">Support</a><a href="privacy.html">Privacy</a></nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy reveal">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Mac PDF reader <span class="eyebrow-divider">·</span> Preparing for the first release</p>
+        <h1 id="hero-title">Read the whole document.<br><span>Keep the source close.</span></h1>
+        <p class="hero-lede">Foliance helps you make sense of reports, project plans and meeting papers while the original page stays within reach. Follow a finding back to its passage, then decide what belongs in your notes or export.</p>
+        <div class="hero-actions"><a class="button button-primary" href="#reader">Explore the reading flow <span aria-hidden="true">↓</span></a><a class="button button-secondary" href="support.html">Get support</a></div>
+        <p class="release-note"><span aria-hidden="true">◷</span> First release in preparation · No download is available yet</p>
+        <p class="opensource-note">Free and open source under the MIT License. <a href="https://github.com/SyntheticDiz/Foliance">Browse the project on GitHub <span aria-hidden="true">↗</span></a></p>
+      </div>
+
+      <div class="workbench-shell reveal" role="group" aria-label="Illustrative Foliance reading view using a fictional document">
+        <div class="window-bar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="window-title">Northwind studio · Workspace upgrade.pdf</span><span class="window-menu" aria-hidden="true">•••</span></div>
+        <div class="workbench-toolbar"><span class="toolbar-chip"><span class="chip-dot"></span> Project plan</span><span class="toolbar-control">Find in document <kbd>⌘ F</kbd></span><span class="toolbar-control">Export <span aria-hidden="true">⌄</span></span></div>
+        <div class="mock-columns">
+          <section class="mock-review" aria-labelledby="profile-title">
+            <div class="review-top"><span class="review-label">FICTIONAL DOCUMENT · ILLUSTRATIVE FINDINGS</span><span class="example-badge">Example</span></div>
+            <div class="profile-tabs" role="tablist" aria-label="Explore reading profiles">
+              <button id="tab-overview" type="button" role="tab" aria-selected="true" aria-controls="profile-panel" tabindex="0" data-profile="overview">Overview</button>
+              <button id="tab-report" type="button" role="tab" aria-selected="false" aria-controls="profile-panel" tabindex="-1" data-profile="report">Report</button>
+              <button id="tab-project" type="button" role="tab" aria-selected="false" aria-controls="profile-panel" tabindex="-1" data-profile="project">Project plan</button>
+              <button id="tab-meeting" type="button" role="tab" aria-selected="false" aria-controls="profile-panel" tabindex="-1" data-profile="meeting">Meeting notes</button>
+            </div>
+            <div class="profile-panel" id="profile-panel" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+              <span class="panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H19v16H5.5A1.5 1.5 0 0 1 4 18.5zM4 17h15M8 8h7M8 11h7M8 14h4"/></svg></span>
+              <div><h3 id="profile-title">Budget proposed; delivery delayed</h3><span class="profile-status" id="profile-status">Overview · source page 4</span><p id="profile-description">The excerpt states EUR 18,000 as a proposal and says delivery is delayed. A revised date is not stated here.</p></div>
+            </div>
+            <div class="mock-links"><span><span class="link-dot"></span> Source link · page 4</span><span>Full passage available</span></div>
+            <div class="mock-note"><span class="note-icon" aria-hidden="true">✎</span><span>Keep a note or selected passage with your work file.</span></div>
+          </section>
+          <section class="mock-document" aria-label="Fictional source document excerpt">
+            <div class="mock-doc-head"><span>FICTIONAL PROJECT PLAN</span><span>PAGE 4 OF 18</span></div>
+            <p class="doc-kicker">WORKSPACE UPGRADE</p><h2>Delivery and budget</h2>
+            <p class="doc-copy">The proposal sets out the first stage of the studio workspace upgrade and the costs recorded so far.</p>
+            <blockquote>“The proposed budget is EUR 18,000. Delivery has been delayed. A revised delivery date will be provided after supplier review.”</blockquote>
+            <p class="doc-copy doc-copy-muted">The project team will share an updated schedule when the review is complete.</p>
+            <div class="source-caption"><span class="source-mark" aria-hidden="true"></span> Original document text · page 4</div>
+          </section>
+        </div>
+        <div class="workbench-foot"><span><b>F</b> Foliance</span><span>Fictional example · Quotation remains unchanged</span></div>
+      </div>
+    </section>
+
+    <section class="flow-section" id="reader" aria-labelledby="flow-title">
+      <div class="wrap">
+        <div class="section-heading reveal"><p class="eyebrow">A calm, checkable workflow</p><h2 id="flow-title">Move from pages to understanding<br><span>one source at a time.</span></h2><p>Foliance gives you room to read and search while processing runs, then keeps the surrounding passage close when you review a result.</p></div>
+        <div class="flow-grid">
+          <article class="flow-card reveal"><span class="flow-step">01</span><div class="flow-symbol symbol-file" aria-hidden="true">↗</div><h3>Open a PDF</h3><p>Read selectable text, browse pages and search locally. Image-only scans need a searchable text layer from OCR before their text can be analyzed.</p></article>
+          <article class="flow-card reveal"><span class="flow-step">02</span><div class="flow-symbol symbol-focus" aria-hidden="true">⌕</div><h3>Set a reading goal</h3><p>Pick a profile, add questions or topics, and optionally attach a reference document with comparison criteria.</p></article>
+          <article class="flow-card reveal"><span class="flow-step">03</span><div class="flow-symbol symbol-source" aria-hidden="true">↳</div><h3>Check and keep</h3><p>Open the linked source and full passage. Add notes, save selected excerpts, and export only the sections you choose.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="profiles-section wrap" aria-labelledby="profiles-title">
+      <div class="profiles-copy reveal"><p class="eyebrow">Four profiles · same original document</p><h2 id="profiles-title">Choose what to look for.<br><span>Keep your judgement.</span></h2><p>Profiles organize the reading around a different purpose. They guide what to notice; they do not replace the source or make an AI interpretation a verified fact.</p><a class="inline-link" href="support.html#check-a-finding">How to check a finding <span aria-hidden="true">↗</span></a></div>
+      <div class="profile-list reveal">
+        <article><span class="profile-number">01</span><div><h3>Overview</h3><p>Orient yourself and find the main points.</p></div><span class="list-chevron" aria-hidden="true">›</span></article>
+        <article><span class="profile-number">02</span><div><h3>Report</h3><p>Review findings, actions, costs and open questions.</p></div><span class="list-chevron" aria-hidden="true">›</span></article>
+        <article><span class="profile-number">03</span><div><h3>Project plan</h3><p>Trace scope, dependencies, risks and delivery.</p></div><span class="list-chevron" aria-hidden="true">›</span></article>
+        <article><span class="profile-number">04</span><div><h3>Meeting notes</h3><p>Distinguish decisions, commitments and proposals.</p></div><span class="list-chevron" aria-hidden="true">›</span></article>
+      </div>
+    </section>
+
+    <section class="features-section" aria-labelledby="features-title">
+      <div class="wrap"><div class="section-heading reveal"><p class="eyebrow">Made for careful reading</p><h2 id="features-title">Keep the useful parts<br><span>together.</span></h2></div>
+        <div class="feature-grid">
+          <article class="feature-card reveal"><span class="feature-icon">⌕</span><h3>Find it again</h3><p>Search available text in the current document and saved work, then jump back to a useful page.</p></article>
+          <article class="feature-card reveal"><span class="feature-icon">“</span><h3>Keep the full context</h3><p>Follow source links, read complete passages, and keep exact selections with their page references.</p></article>
+          <article class="feature-card reveal"><span class="feature-icon">✎</span><h3>Make it yours</h3><p>Add your own notes and questions. Portable <code>.foliance</code> files keep the PDF and review together.</p></article>
+          <article class="feature-card reveal"><span class="feature-icon">⇧</span><h3>Export with control</h3><p>Choose the sections, scope and destination. Review the preview before saving or sharing a PDF.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="ai-section" aria-labelledby="ai-title">
+      <div class="wrap"><div class="ai-heading reveal"><p class="eyebrow">Choose how analysis runs</p><h2 id="ai-title">Local by default.<br><span>Cloud only by choice.</span></h2><p>Reading, local search and saved work remain available without cloud AI. Foliance does not silently switch providers.</p></div>
+        <div class="ai-grid">
+          <article class="ai-card ai-default reveal"><div class="ai-card-top"><span class="provider-icon apple-icon" aria-hidden="true">⌘</span><span class="provider-tag">DEFAULT</span></div><h3>Apple Intelligence</h3><p>Runs document analysis on your Mac using Apple’s on-device model.</p><ul><li>Compatible Apple silicon Mac</li><li>macOS 26 or later</li><li>Apple Intelligence enabled and model downloaded</li></ul><a class="inline-link" href="privacy.html#apple-intelligence">On-device details <span aria-hidden="true">↗</span></a></article>
+          <article class="ai-card reveal"><div class="ai-card-top"><span class="provider-icon api-icon" aria-hidden="true">⌘↗</span><span class="provider-tag">OPTIONAL</span></div><h3>OpenAI API key</h3><p>Connect your own API account and choose a model ID. Your use is billed by OpenAI API.</p><ul><li>Your own key in Foliance Keychain</li><li>Separate API billing and model access</li><li>Consent before document content is sent</li></ul><a class="inline-link" href="privacy.html#openai-api">API details <span aria-hidden="true">↗</span></a></article>
+          <article class="ai-card reveal"><div class="ai-card-top"><span class="provider-icon plan-icon" aria-hidden="true">◎</span><span class="provider-tag">OPTIONAL</span></div><h3>ChatGPT plan</h3><p>Sign in to an eligible account, then choose a model from that account’s catalog.</p><ul><li>OpenAI sign-in in your browser</li><li>Plan usage or credits depend on eligibility and limits</li><li>Separate consent before task content is sent</li></ul><a class="inline-link" href="privacy.html#chatgpt-plan">Plan details <span aria-hidden="true">↗</span></a></article>
+        </div>
+        <p class="ai-disclosure reveal">Cloud options are off until you choose them and consent to document sharing. Signing in does not give Foliance access to ChatGPT conversations. <a href="privacy.html">Read exactly what is sent and stored.</a></p>
+      </div>
+    </section>
+
+    <section class="closing-section wrap reveal"><div><p class="eyebrow">Built for independent work</p><h2>Free and open source.<br><span>Preparing for release.</span></h2><p>Foliance is a native Mac reader for documents you choose, with a workflow built around source checks and your own notes.</p></div><div class="closing-actions"><a class="button button-primary" href="https://github.com/SyntheticDiz/Foliance">View source on GitHub <span aria-hidden="true">↗</span></a><a class="inline-link" href="support.html">Read support and FAQs <span aria-hidden="true">→</span></a></div></section>
+  </main>
+
+  <footer class="site-footer wrap"><a class="brand" href="index.html"><img src="assets/foliance.svg?v=2" width="30" height="30" alt=""><span>Foliance</span></a><p>Read carefully. Keep the source close.</p><nav aria-label="Footer navigation"><a href="support.html">Support</a><a href="privacy.html">Privacy</a><a href="https://github.com/SyntheticDiz/Foliance">GitHub <span aria-hidden="true">↗</span></a></nav></footer>
+</body>
+</html>

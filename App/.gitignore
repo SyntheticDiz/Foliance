@@ -1,0 +1,10 @@
+.build/
+dist/
+.DS_Store
+AppStore/Submission.local.json
+*.provisionprofile
+*.mobileprovision
+*.p12
+*.p8
+.env
+.env.*
