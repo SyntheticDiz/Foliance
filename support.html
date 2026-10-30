@@ -1,103 +1,52 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#f7f3e9">
-  <meta name="description" content="Foliance help for local AI analysis, scanned PDFs, source checks, saved work, and export.">
-  <title>Support — Foliance</title>
-  <link rel="icon" type="image/svg+xml" href="assets/foliance.svg?v=2">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><meta name="theme-color" content="#f0f2f5">
+  <meta name="description" content="Foliance support for local and cloud AI, scanned PDFs, source checks, saved work, and export.">
+  <title>Support — Foliance</title><link rel="icon" type="image/svg+xml" href="assets/foliance.svg?v=2"><link rel="stylesheet" href="style.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Foliance home">
-      <img src="assets/foliance.svg?v=2" width="42" height="42" alt="">
-      <span>Foliance</span>
-    </a>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="index.html#how-it-works">How it works</a>
-      <a href="support.html" aria-current="page">Support</a>
-      <a href="privacy.html">Privacy</a>
-    </nav>
-  </header>
-
-  <main id="main" class="wrap page-main">
-    <section class="page-intro" aria-labelledby="support-title">
-      <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> FOLIANCE HELP</p>
-      <h1 id="support-title">A clear answer,<br><em>close to the work.</em></h1>
-      <p class="page-lede">Start with the issue you're seeing. These notes cover the common steps for reading, checking, and keeping a document.</p>
-      <p class="release-note"><span class="status-mark" aria-hidden="true"></span> Foliance is preparing for its first release.</p>
-    </section>
-
-    <section class="support-layout" aria-label="Help topics and contact">
-      <div class="faq-list">
-        <details class="faq-item" open>
-          <summary><span class="faq-number">01</span><span>Why is AI analysis unavailable?</span><span class="summary-plus" aria-hidden="true"></span></summary>
-          <div class="faq-answer">
-            <p>For Apple Intelligence, use a compatible Apple silicon Mac running macOS 26 or later, enable Apple Intelligence, and let its English model finish downloading. For OpenAI API, add your own API key, select an available model, and grant document-sharing consent in Foliance Settings.</p>
-            <p>If OpenAI returns an access or quota error, check the key’s permissions, model access, and API billing. Foliance does not switch providers silently. You can still read and search available PDF text without starting AI analysis.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary><span class="faq-number">02</span><span>Why can't Foliance read my scanned PDF?</span><span class="summary-plus" aria-hidden="true"></span></summary>
-          <div class="faq-answer">
-            <p>A scan is usually an image of a page, not selectable text. Foliance needs a readable text layer to search, quote, and link findings back to the document.</p>
-            <p>Run OCR with a tool you trust, then open the resulting searchable PDF. Check recognized text against the original scan, especially figures, dates, and tables.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary><span class="faq-number">03</span><span>How should I check an AI finding?</span><span class="summary-plus" aria-hidden="true"></span></summary>
-          <div class="faq-answer">
-            <p>Open the linked source passage and read the surrounding paragraph in the PDF. Confirm that amounts, dates, conditions, exceptions, and who said what match the document.</p>
-            <p>AI interpretations are reading aids, not verified facts. If a quote or connection cannot be confirmed, rely on the original text and keep the point marked for review.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary><span class="faq-number">04</span><span>Where is my work saved?</span><span class="summary-plus" aria-hidden="true"></span></summary>
-          <div class="faq-answer">
-            <p>Foliance keeps document text, summaries, questions, notes, selected passages, recent-file bookmarks, and saved work in its own local app container on your Mac.</p>
-            <p>You choose where to save exported PDFs and portable <code>.foliance</code> work files. A work file contains the original PDF plus its analysis and annotations, so share it only with people who should receive that material.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary><span class="faq-number">05</span><span>What goes into an export?</span><span class="summary-plus" aria-hidden="true"></span></summary>
-          <div class="faq-answer">
-            <p>Choose the sections and scope in the export window, review the preview and filename, then select where to save the PDF. An export may include source passages, your notes, or selected excerpts, depending on your choices.</p>
-            <p>Read the preview before sharing. Exported files are copies you control; Foliance does not upload them.</p>
-          </div>
-        </details>
-        <details class="faq-item">
-          <summary><span class="faq-number">06</span><span>Does Foliance need an internet connection?</span><span class="summary-plus" aria-hidden="true"></span></summary>
-          <div class="faq-answer">
-            <p>Reading, local search, and reviewing saved work work offline. Apple may need a connection to download its on-device model. OpenAI API needs an internet connection for each request. Opening a link in your browser sends a request to that website.</p>
-            <p>With Apple Intelligence, document content stays on your Mac. If you choose OpenAI API and grant consent, task content is sent directly to OpenAI using your own key. API usage is billed to your OpenAI account. You can remove the key or revoke consent in Settings.</p>
-          </div>
-        </details>
-      </div>
-
-      <aside class="support-aside">
-        <div class="aside-card">
-          <p class="eyebrow">REPORT A PROBLEM</p>
-          <h2>Help us understand what happened.</h2>
-          <p>Use the project issue tracker for a bug report or a support question. Include your macOS version, what you expected, and the steps that led to the issue.</p>
-          <a class="button button-dark button-wide" href="https://github.com/SyntheticDiz/Foliance/issues/new">Open a GitHub issue <span aria-hidden="true">↗</span></a>
-          <p class="privacy-reminder"><strong>Please leave private material out.</strong> Do not attach PDFs, paste document text, or include personal details, credentials, or other sensitive information.</p>
-        </div>
-        <div class="aside-note">
-          <span class="aside-note-mark" aria-hidden="true">↗</span>
-          <p>For privacy questions, see the <a href="privacy.html">Foliance privacy policy</a>.</p>
-        </div>
-      </aside>
-    </section>
+  <header class="site-header wrap"><a class="brand" href="index.html" aria-label="Foliance home"><img src="assets/foliance.svg?v=2" width="36" height="36" alt=""><span>Foliance</span></a><nav class="site-nav" aria-label="Main navigation"><a href="index.html#reader">How it works</a><a href="support.html" aria-current="page">Support</a><a href="privacy.html">Privacy</a></nav></header>
+  <main id="main" class="page-main wrap">
+    <section class="page-intro"><p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> FOLIANCE SUPPORT</p><h1>Get back to reading.<br><span>Find a clear next step.</span></h1><p class="page-lede">Short answers for setup, source checking and saved work. Foliance is preparing for its first release; there is no download yet.</p><div class="support-chips"><a href="#ai-unavailable">AI setup</a><a href="#check-a-finding">Source checks</a><a href="#saved-work">Saved work</a><a href="privacy.html">Privacy</a></div></section>
+    <div class="support-layout">
+      <section class="faq-list" aria-label="Frequently asked questions">
+        <details class="faq-item" id="ai-unavailable" open><summary><span class="faq-number">01</span><span>Why is AI analysis unavailable?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p><strong>Apple Intelligence:</strong> use a compatible Apple silicon Mac with macOS 26 or later. Turn on Apple Intelligence and wait for its English model to download.</p>
+          <p><strong>OpenAI API:</strong> save your own API key, choose a model ID available to your API account, and grant document-sharing consent. API access and billing are separate from a ChatGPT subscription.</p>
+          <p><strong>ChatGPT plan:</strong> continue with ChatGPT in your browser, select the saved account you want to use, then choose a model currently offered in that account’s catalog. Usage depends on account eligibility and limits. Consent to send task content is still required.</p>
+          <p>Foliance does not switch providers or billing methods silently. You can still read, search and review saved results when analysis cannot run.</p>
+        </div></details>
+        <details class="faq-item"><summary><span class="faq-number">02</span><span>What is the difference between the two OpenAI options?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p>The <strong>OpenAI API</strong> option uses your API key and your API account’s separate billing. You choose a model ID that your API account can access.</p>
+          <p>The <strong>ChatGPT plan</strong> option signs in to an eligible ChatGPT account and uses its available plan usage or credits. Foliance shows models returned by that account; access and limits can change. Signing in does not give Foliance access to your ChatGPT conversations.</p>
+          <p>Both options require separate consent before document text is sent. See the <a href="privacy.html#ai-processing">privacy details</a>.</p>
+        </div></details>
+        <details class="faq-item"><summary><span class="faq-number">03</span><span>Why can’t Foliance read my scanned PDF?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p>A scan may contain only page images, with no selectable text. Foliance needs a text layer to search, quote and link back to a passage.</p>
+          <p>Run OCR with a tool you trust, then open the searchable PDF. Check recognized text against the original scan, especially figures, dates and tables. OCR can make mistakes.</p>
+        </div></details>
+        <details class="faq-item" id="check-a-finding"><summary><span class="faq-number">04</span><span>How should I check a finding?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p>Open the source link and read the full surrounding passage in the PDF. Verify numbers, dates, conditions, exceptions and who said what.</p>
+          <p>A matching quotation helps confirm where a passage came from; it does not prove that an interpretation is correct. Treat AI output as a reading aid and rely on the original document when something is uncertain.</p>
+        </div></details>
+        <details class="faq-item" id="saved-work"><summary><span class="faq-number">05</span><span>Where are notes and saved work kept?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p>Foliance stores its working data and recent-file bookmarks in its own local app container. You choose where to save exported PDFs and portable <code>.foliance</code> work files.</p>
+          <p>A work file can include the original PDF, reference document, results, reading goal, notes and selected passages. Anyone with the file may be able to read that information, so share it only with intended recipients. Removing a recent-file entry does not delete the original PDF.</p>
+        </div></details>
+        <details class="faq-item"><summary><span class="faq-number">06</span><span>What goes into an export?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p>Choose the sections and scope in the export window, inspect the preview and filename, then select a save location. Depending on your choices, a PDF may contain source passages, your notes or saved excerpts.</p>
+          <p>Foliance does not upload exported files. Review the preview before sharing a copy.</p>
+        </div></details>
+        <details class="faq-item"><summary><span class="faq-number">07</span><span>Does Foliance need the internet?</span><span class="summary-plus" aria-hidden="true"></span></summary><div class="faq-answer">
+          <p>Reading, local search and saved work are available offline. Apple may need a connection to download its on-device model. OpenAI API and ChatGPT plan analysis need an internet connection for their requests or sign-in.</p>
+          <p>For either cloud option, Foliance asks for document-sharing consent before sending task content. Opening an external website link sends a browser request to that site under its own policy.</p>
+        </div></details>
+      </section>
+      <aside class="support-aside"><div class="aside-card"><p class="eyebrow">REPORT A PROBLEM</p><h2>Tell us what happened.</h2><p>Use GitHub Issues for a bug report or support question. Include your macOS version, what you expected, and steps to reproduce the issue.</p><a class="button button-primary button-wide" href="https://github.com/SyntheticDiz/Foliance/issues/new">Open a GitHub issue <span aria-hidden="true">↗</span></a><p class="privacy-reminder"><strong>Please keep private material out.</strong> Do not attach PDFs, paste document text, or include personal details, API keys, sign-in tokens or other credentials in a public issue.</p></div><p class="aside-note">For data-handling questions, read the <a href="privacy.html">Foliance privacy policy</a>.</p></aside>
+    </div>
   </main>
-
-  <footer class="site-footer wrap">
-    <a class="brand brand-footer" href="index.html"><img src="assets/foliance.svg?v=2" width="32" height="32" alt=""><span>Foliance</span></a>
-    <p>Read carefully. Keep the source in reach.</p>
-    <nav aria-label="Footer navigation"><a href="support.html">Support</a><a href="privacy.html">Privacy</a></nav>
-  </footer>
+  <footer class="site-footer wrap"><a class="brand" href="index.html"><img src="assets/foliance.svg?v=2" width="30" height="30" alt=""><span>Foliance</span></a><p>Read carefully. Keep the source close.</p><nav aria-label="Footer navigation"><a href="index.html">Home</a><a href="privacy.html">Privacy</a><a href="https://github.com/SyntheticDiz/Foliance">GitHub <span aria-hidden="true">↗</span></a></nav></footer>
 </body>
 </html>
